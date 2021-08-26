@@ -1,0 +1,1391 @@
+#include "OberonViewer.h"
+#include "ui_OberonViewer.h"
+
+OberonViewer::OberonViewer(bool vTable,
+                            QString scopeAttributes,
+                            QString tableName,
+                            QString queryCenterName,
+                            QString similarityAttribute,
+                            FeatureVector queryCenter,
+                            MedicalImageTable rSet,
+                            Util::SEARCH_TYPE searchType,
+                            uint16_t k,
+                            uint16_t kBridge,
+                            QString vTableName,
+                            QString metricName,
+                            QWebSocket *webSocket,
+                            QWidget *parent)
+    : QMainWindow(parent), ui(new Ui::OberonViewer){
+
+    ui->setupUi(this);
+    this->setAttribute(Qt::WA_DeleteOnClose);
+
+    this->searchType = searchType;
+    this->rSet = rSet;
+    this->simAttribute = similarityAttribute;
+    this->tableName = tableName;
+    this->webSocket = webSocket;
+    this->oqFileName = queryCenterName;
+    this->oq = queryCenter;
+    this->vTable = vTable;
+    this->scopeAttributes = scopeAttributes;
+    this->vTableName = vTableName;
+    this->metricName = metricName;
+    ui->txtKnn->setText(QString::number(k));
+    ui->txtBridge->setText(QString::number(kBridge));
+
+    currentImage = nullptr;
+    queryImage = nullptr;
+
+
+    ui->lblServerSetup->setText("Loading, please wait ...");
+    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state01);
+    webSocket->sendBinaryMessage(scopeCaption.generateSQLBaseQuery(tableName).toStdString().c_str());
+}
+
+void OberonViewer::state01(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state01);
+
+    int posAtt, posValue, posCaption;
+    ResultTable tuples(Util::toStringList(message.split('\n')));
+
+    posAtt= tuples.locateColumn("attribute");
+    posValue= tuples.locateColumn("valueN");
+    posCaption= tuples.locateColumn("caption");
+
+    //Load caption for user-defined scope...
+    for (int x = 0; x < tuples.size(); x++){
+        scopeCaption.addEntry(tuples.fetchByColumnId(x, posAtt), tuples.fetchByColumnId(x, posValue), tuples.fetchByColumnId(x, posCaption));
+    }
+
+    splitResultSets();
+}
+
+void OberonViewer::splitResultSets(){
+
+    //Lock screen widgets...
+    ui->tabWidget->hide();
+    ui->lytCentral->setEnabled(false);
+
+    //In-memory FS for WASM - File sync finishes at state 04
+    if (searchType == Util::SIMILARITY_SEARCH || searchType ==Util::DIVERSITY_SEARCH){
+        downloadNonInfluencedImages();
+    } else {
+        loadInfluencedImages();
+    }
+}
+
+void OberonViewer::fillThumbnails(){
+
+    currentImage = Util::openImage(oqFileName);
+    adjustSliders();
+    fillQueryCenter(currentImage);
+    queryImage = currentImage;
+
+    if (searchType == Util::SIMILARITY_SEARCH || searchType == Util::DIVERSITY_SEARCH){
+        //Single result set
+        loadThumbnailsRight(rSet);
+    } else {
+        //Two-level and clustered result set
+        ui->lytDiversity->setAlignment(Qt::AlignLeft);
+        ui->lytMyList->setAlignment(Qt::AlignLeft);
+        loadThumbnailsRight(rSet);
+        tabs[0] = ui->lstInfluencedImages;
+        tabs[1] = ui->lstMyList;
+        ui->lstInfluencedImages->setEnabled(false);
+        ui->lstMyList->setEnabled(false);
+        ui->tabWidget->clear();
+    }
+}
+
+void OberonViewer::loadInfluencedImages(){
+
+    ui->lblServerSetup->setText("Loading, please wait ...");
+
+    if (!rSet.size()){
+        ui->lblServerSetup->setText("Empty result set!");
+        return ;
+    }
+
+    //Separate influencers and influenced
+    FeatureVector oj;
+    MedicalImageTable newRSet;
+    int colId, colInfluenced;
+
+    tempRInfset.clear();
+    newRSet.addCaption(rSet.fetchCaption());
+    tempRInfset.addCaption(rSet.fetchCaption());
+
+    colId = rSet.locateImageID();
+    colInfluenced = rSet.locateColumn(simAttribute + "$bridged");
+
+    for (int x = 0; x < rSet.size(); x++){
+        bool found = false;
+        for (int y = 0; ((!found) && (y < newRSet.size())); y++){
+            found = (newRSet.fetchByColumnId(y, colId) == rSet.fetchByColumnId(x, colId));
+        }
+        if (!found){
+            newRSet.addTuple(rSet.fetchTupleByRowId(x));
+        }
+        tempRInfset.addTuple(rSet.fetchTupleByRowId(x));
+    }
+    rSet.clear();
+    rSet = newRSet;
+
+    //Requested data from first influenced entry, then loop...
+    counterImgsDownPanel = 0;
+    if (counterImgsDownPanel < tempRInfset.size()){
+
+        SirenSQLQuery queryT;
+        QString tblName;
+        QStringList scope = scopeAttributes.split(",");
+
+        oj.unserializeFromString(FeatureVector::fromBase64(tempRInfset.fetchByColumnId(counterImgsDownPanel, colInfluenced).toStdString()));
+        for (int x = 0; x < scope.size(); x++){
+            queryT.addProjectionAttribute(scope.at(x).simplified());
+        }
+        if (vTable){
+            tblName = "temp";
+        } else {
+            tblName = tableName;
+        }
+
+        queryT.addProjectionList({ tblName + ".Filename Filename", tblName + ".Id Id"});
+        queryT.addTable(tableName + " AS " + tblName);
+        queryT.addWhereAttribute(simAttribute + " = " + QString::number(oj.getOID()));
+
+        ui->lblServerSetup->setText("Downloading, please wait ...");
+        connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state02);
+        webSocket->sendBinaryMessage(queryT.generateQuery().toStdString().c_str());
+    } else {
+        downloadInfluencedImages();
+    }
+}
+
+void OberonViewer::state02(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state02);
+
+    FeatureVector oj;
+    int posIdTempSet, posIdInfSet, posIdRSet, colInfluenced;
+    MedicalImageTable tuples(Util::toStringList(message.split('\n')));
+
+    if (!rInfset.fetchCaption().size()){
+        rInfset.addCaption(tuples.fetchCaption());
+    }
+
+    posIdTempSet = tempRInfset.locateImageID();
+    posIdInfSet = rInfset.locateImageID();
+    posIdRSet = rSet.locateImageID();
+    colInfluenced = tempRInfset.locateColumn(simAttribute + "$bridged");
+
+
+    QString key = tempRInfset.fetchByColumnId(counterImgsDownPanel, posIdTempSet);
+    uint16_t pos = rSet.locateFirstRow(key, posIdRSet);
+
+
+    if (tuples.fetchByColumnId(0, posIdInfSet) != rSet.fetchByColumnId(pos, posIdRSet)){
+        rInfset.addTuple(tuples.fetchTupleByRowId(0));
+        mapInfluencedRows.insert(pos, rInfset.size()-1);
+    }
+
+    counterImgsDownPanel++;
+    if (counterImgsDownPanel < tempRInfset.size()){
+
+        SirenSQLQuery queryT;
+        QString tblName;
+        QStringList scope = scopeAttributes.split(",");
+
+        oj.unserializeFromString(FeatureVector::fromBase64(tempRInfset.fetchByColumnId(counterImgsDownPanel, colInfluenced).toStdString()));
+        for (int x = 0; x < scope.size(); x++){
+            queryT.addProjectionAttribute(scope.at(x).simplified());
+        }
+        if (vTable){
+            tblName = "temp";
+        } else {
+            tblName = tableName;
+        }
+
+        queryT.addProjectionList({ tblName + ".Filename Filename", tblName + ".Id Id"});
+        queryT.addTable(tableName + " AS " + tblName);
+        queryT.addWhereAttribute(simAttribute + " = " + QString::number(oj.getOID()));
+
+        ui->lblServerSetup->setText("Downloading, please wait ...");
+        connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state02);
+        webSocket->sendBinaryMessage(queryT.generateQuery().toStdString().c_str());
+    } else {
+        downloadInfluencedImages();
+    }
+}
+
+
+void OberonViewer::downloadInfluencedImages(){
+
+    int posImg, posId;
+    //Dismantle temporary second-level result set
+    tempRInfset.clear();
+    //Recycle global counterImgsDownPanel
+    counterImgsDownPanel = 0;
+
+    posImg = rInfset.locateImageFilename();
+    posId = rInfset.locateImageID();
+
+    while (counterImgsDownPanel < rInfset.size()
+           && QFileInfo::exists(rInfset.fetchByColumnId(counterImgsDownPanel, posImg))
+           && QFileInfo(rInfset.fetchByColumnId(counterImgsDownPanel, posImg)).isFile()) {
+        mapOidToNames[rInfset.fetchByColumnId(counterImgsDownPanel, posId).toUInt()] = rInfset.fetchByColumnId(counterImgsDownPanel, posImg).toStdString();
+        counterImgsDownPanel++;
+    }
+
+    if (counterImgsDownPanel < rInfset.size()){
+        QString request = "REQUEST " + rInfset.fetchByColumnId(counterImgsDownPanel, posImg);
+        connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state03);
+        ui->lblServerSetup->setText("Downloading " + QString::number(counterImgsDownPanel) + "/" + QString::number(rInfset.size())+ ", please wait ...");
+        webSocket->sendBinaryMessage(request.toStdString().c_str());
+    } else {
+        downloadNonInfluencedImages();
+    }
+}
+
+void OberonViewer::state03(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state03);
+
+    int posImg, posId;
+    posImg = rInfset.locateImageFilename();
+    posId = rInfset.locateImageID();
+
+    QString filename = rInfset.fetchByColumnId(counterImgsDownPanel, posImg);
+
+    if (!filename.toStdString().empty()){
+        Util::saveImageAndThumbnailToFS(filename, message);
+        mapOidToNames[rInfset.fetchByColumnId(counterImgsDownPanel, posId).toUInt()] = filename.toStdString();
+    } else {
+        ui->lblServerSetup->setText("Local storage fatal error.");
+    }
+
+    counterImgsDownPanel++;
+    while (counterImgsDownPanel < rInfset.size()
+           && QFileInfo::exists(rInfset.fetchByColumnId(counterImgsDownPanel, posImg))
+           && QFileInfo(rInfset.fetchByColumnId(counterImgsDownPanel, posImg)).isFile()) {
+        mapOidToNames[rInfset.fetchByColumnId(counterImgsDownPanel, posId).toUInt()] = rInfset.fetchByColumnId(counterImgsDownPanel, posImg).toStdString();
+        counterImgsDownPanel++;
+    }
+
+    if (counterImgsDownPanel < rInfset.size()){
+        QString request = "REQUEST " + rInfset.fetchByColumnId(counterImgsDownPanel, posImg);
+        connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state03);
+        ui->lblServerSetup->setText("Downloading " + QString::number(counterImgsDownPanel) + "/" + QString::number(rInfset.size())+ ", please wait ...");
+        webSocket->sendBinaryMessage(request.toStdString().c_str());
+    } else {
+        downloadNonInfluencedImages();
+    }
+}
+
+void OberonViewer::downloadNonInfluencedImages(){
+
+    int posImg, posId;
+    counterImgsRightPanel = 0;
+
+    posImg = rSet.locateImageFilename();
+    posId = rSet.locateImageID();
+
+    while (counterImgsRightPanel < rSet.size()
+           && QFileInfo::exists(rSet.fetchByColumnId(counterImgsRightPanel, posImg))
+           && QFileInfo(rSet.fetchByColumnId(counterImgsRightPanel, posImg)).isFile()){
+        mapOidToNames[rSet.fetchByColumnId(counterImgsRightPanel, posId).toUInt()] = rSet.fetchByColumnId(counterImgsRightPanel, posImg).toStdString();
+        counterImgsRightPanel++;
+    }
+
+    if (counterImgsRightPanel < rSet.size()){
+        QString request = "REQUEST " + rSet.fetchByColumnId(counterImgsRightPanel, posImg);
+        connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state04);
+        ui->lblServerSetup->setText("Downloading " + QString::number(counterImgsRightPanel) + "/" + QString::number(rSet.size())+ ", please wait ...");
+        webSocket->sendBinaryMessage(request.toStdString().c_str());
+    } else {
+        downloadOq();
+    }
+}
+
+
+void OberonViewer::state04(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state04);
+    ui->lblServerSetup->setText("Saving, please wait ...");
+
+    int posImg, posId;
+    QString filename;
+    posImg = rSet.locateImageFilename();
+    posId = rSet.locateImageID();
+
+    filename = rSet.fetchByColumnId(counterImgsRightPanel, posImg);
+    if (!filename.toStdString().empty()){
+        Util::saveImageAndThumbnailToFS(filename, message);
+        mapOidToNames[rSet.fetchByColumnId(counterImgsRightPanel, posId).toUInt()] = filename.toStdString();
+    } else {
+        ui->lblServerSetup->setText("Local storage fatal error.");
+    }
+
+    counterImgsRightPanel++;
+    while (counterImgsRightPanel < rSet.size()
+           && QFileInfo::exists(rSet.fetchByColumnId(counterImgsRightPanel, posImg))
+           && QFileInfo(rSet.fetchByColumnId(counterImgsRightPanel, posImg)).isFile()){
+        mapOidToNames[rSet.fetchByColumnId(counterImgsRightPanel, posId).toUInt()] = rSet.fetchByColumnId(counterImgsRightPanel, posImg).toStdString();
+        counterImgsRightPanel++;
+    }
+
+    if (counterImgsRightPanel < rSet.size()){
+        QString request = "REQUEST " + rSet.fetchByColumnId(counterImgsRightPanel, posImg);
+        connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state04);
+        ui->lblServerSetup->setText("Downloading " + QString::number(counterImgsRightPanel) + "/" + QString::number(rSet.size())+ ", please wait ...");
+        webSocket->sendBinaryMessage(request.toStdString().c_str());
+    } else {
+        downloadOq();
+    }
+}
+
+void OberonViewer::downloadOq(){
+
+    ui->lblServerSetup->setText("Downloading center, please wait ...");
+    QString request = "REQUEST " + oqFileName.simplified();
+    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state05);
+
+    ui->lblServerSetup->setText("Building, please wait ...");
+    webSocket->sendBinaryMessage(request.toStdString().c_str());
+}
+
+void OberonViewer::state05(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state05);
+    ui->lblServerSetup->setText("Saving file, please wait ...");
+
+    if (!oqFileName.toStdString().empty()){
+        Util::saveImageAndThumbnailToFS(oqFileName, message);
+    } else {
+        ui->lblServerSetup->setText("Local storage fatal error.");
+    }
+
+    fillThumbnails();
+
+    //Unlocking main screen....
+    ui->lytCentral->setEnabled(true);
+    ui->lblServerSetup->setText("CBIR is ready!");
+}
+
+void OberonViewer::printVariables(){
+
+    qDebug() << "rSet";
+    rSet.print();
+
+    qDebug() << "rInfSet";
+    rInfset.print();
+
+    qDebug() << "map inf rows";
+    QMapIterator<uint16_t, uint16_t> i(mapInfluencedRows);
+    while (i.hasNext()) {
+        i.next();
+        qDebug() << i.key() << ": " << i.value();
+    }
+
+    qDebug() << "map oid to names";
+    for (auto const& x : mapOidToNames){
+        qDebug() << x.first << ": " << x.second.c_str();
+    }
+
+    qDebug() << "myList";
+    for (auto const& x : myList){
+        qDebug() << x;
+    }
+
+    qDebug() << "removed list";
+    for (auto const& x : removedListOfIds){
+        qDebug() << x;
+    }
+}
+
+QString OberonViewer::toolTipBuilder(MedicalImageTable tempSet, int row){
+
+    QString answer;
+    std::string caption;
+    int posId, posImg, posBridge, posBridgedId;
+
+    posId = tempSet.locateImageID();
+    posImg = tempSet.locateImageFilename();
+    posBridge = tempSet.locateColumn(simAttribute + "$bridged");
+    posBridgedId = tempSet.locateColumn(simAttribute + "$_id");
+
+    for (int x = 0; ((tempSet.size() > row) && (x < tempSet.dimensionality())); x++){
+        if (x != posId && x != posImg && x != posBridge && x != posBridgedId){
+            if (answer.size()){
+                answer += "\n";
+            }
+            answer += tempSet.fetchCaption(x) + ": ";
+            if (scopeCaption.findCaption(tempSet.fetchCaption(x),
+                                         tempSet.fetchByColumnId(row, x),
+                                         &caption)){
+                answer += QString(caption.c_str());
+            } else {
+                answer += tempSet.fetchByColumnId(row, x);
+            }
+        }
+    }
+
+    return answer;
+}
+
+void OberonViewer::loadThumbnailsRight(MedicalImageTable tempSet){
+
+    ui->lblServerSetup->setText("Loading thumbs, please wait ...");
+
+    int posImg, posId;
+    int row, column;
+
+    posId = tempSet.locateImageID();
+    posImg = tempSet.locateImageFilename();
+
+    //Delete thumbs inside the gridlayout
+    for (size_t x = 0; x < thumbsImagesRight.size(); x++){
+        QPushButton *tmp = thumbsImagesRight[x];
+        ui->gridLayout_5->removeItem(ui->gridLayout_5->itemAt(ui->gridLayout_5->indexOf(tmp)));
+        delete (tmp);
+    }
+    thumbsImagesRight.clear();
+
+    ui->gridLayout_5->update();
+    ui->scrollAreaSimilar->update();
+
+    for (int x = 0; x < tempSet.size(); x++){
+        //Check if the image was removed (marked as unrelevant)
+        bool removed = false;
+        for(size_t i = 0; ((!removed) && (i < removedListOfIds.size())); i++){
+            removed = (tempSet.fetchByColumnId(x, posId).toUInt() == removedListOfIds[i]);
+        }
+
+        if(!removed){
+            QPushButtonAlter *btn = new QPushButtonAlter(ui->scrollAreaSimilar);
+            connect(btn, SIGNAL(rightClicked()), this, SLOT(unRelevantImageClickedRight()));
+            connect(btn, SIGNAL(leftDoubleClicked()), this, SLOT(changeCenterImage()));
+
+            if(searchType == Util::BRIDGE_SEARCH){
+                connect(btn, SIGNAL(clicked()), this, SLOT(diversityImageClicked()));
+            } else{
+                connect(btn, SIGNAL(clicked()), this, SLOT(relevantImageClicked()));
+            }
+
+            btn->prepare(tempSet.fetchByColumnId(x, posImg));
+            btn->setWhatsThis(tempSet.fetchByColumnId(x, posId));
+            btn->setToolTip(toolTipBuilder(tempSet, x));
+
+            row = floor(thumbsImagesRight.size()/2.0);
+            column = thumbsImagesRight.size()%2;
+            thumbsImagesRight.push_back(btn);
+            ui->gridLayout_5->addWidget(btn, row, column);
+        }
+    }
+    ui->lytSimilar->update();
+    ui->scrollAreaSimilar->update();
+}
+
+void OberonViewer::unRelevantImageClickedRight(){
+
+    QPushButton *tmp = (QPushButton *)sender();
+    tmp->setFlat(false || (!tmp->isFlat()));
+
+    uint32_t OID = tmp->whatsThis().toUInt();
+
+    if (!tmp->isFlat()){
+            std::vector<QPushButton *> aux;
+            for (size_t x = 0; x < thumbsImagesRight.size(); x++){
+                if (x != ui->gridLayout_5->indexOf(tmp)){
+                    aux.push_back(thumbsImagesRight[x]);
+                }
+            }
+            thumbsImagesRight.clear();
+            thumbsImagesRight = aux;
+            ui->gridLayout_5->removeItem(ui->gridLayout_5->itemAt(ui->gridLayout_5->indexOf(tmp)));
+            removedListOfIds.push_back(OID);
+
+            //Checks if this image is an element of the user-selected list of relevance and removes it
+            std::vector<uint32_t> auxList;
+            for(size_t i = 0; i < myList.size(); i++){
+                if(myList[i] != OID)
+                    auxList.push_back(myList[i]);
+            }
+            myList = auxList;
+            loadThumbnailsMyList();
+            tabManager(3);
+            delete (tmp);
+    } else {
+        tmp->setWindowTitle("0");
+        tmp->setStyleSheet(" QPushButton { background: black; border: none }");
+    }
+}
+
+void OberonViewer::fillQueryCenter(Image *src, uint32_t scale){
+
+    QImage *img;
+    img = Util::convertImageToQImage(src);
+    ui->lblCenter->clear();
+    ui->lblCenter->setPixmap(QPixmap::fromImage(img->scaled(scale, scale)));
+
+    if(queryImage == nullptr){
+        QIcon ico;
+        ico.addPixmap(QPixmap::fromImage(img->scaled(200, 200)));
+        ui->btnQueryCenter->setIcon(ico);
+    }
+
+    ui->lblCenter->setMinimumWidth(600);
+    ui->lblCenter->setMinimumHeight(600);
+
+    delete (img);
+}
+
+void OberonViewer::changeCenterImage(){
+
+    QPushButton *tmp = (QPushButton *)sender();
+    uint16_t x = tmp->whatsThis().toUInt();
+
+    if(currentImage != queryImage){
+        delete currentImage;
+    }
+
+    std::string imageName = mapOidToNames[x];
+    currentImage = Util::openImage(imageName.c_str());
+
+    //Reset windowing settings
+    ui->cbxWindowing->setCurrentIndex(0);
+    adjustSliders();
+
+    fillQueryCenter(currentImage);
+}
+
+void OberonViewer::diversityImageClicked() {
+
+    QPushButton *tmp = (QPushButton *)sender();
+    FeatureVector fv;
+    int posId, rowId;
+    uint32_t oid = tmp->whatsThis().toUInt();
+
+    posId = rSet.locateImageID();
+    rowId = rSet.locateFirstRow(QString::number(oid), posId);
+
+    tmp->setFlat(false || (!tmp->isFlat()));
+    ui->lblDetails->setText(tmp->toolTip());
+
+    if (!tmp->isFlat()){
+        for(size_t x = 0; x < thumbsImagesRight.size(); x++){
+            QPushButton *aux = thumbsImagesRight[x];
+            aux->setWindowTitle("0");
+            tmp->setStyleSheet(" QPushButton { background: black; border: none }");
+            aux->setFlat(true);
+        }
+        tmp->setStyleSheet(" QPushButton { background: black; border:2px solid #81a10e }");
+        tmp->setWindowTitle("1");
+        tmp->setFlat(false);
+
+        if (mapInfluencedRows.contains(rowId)){
+            loadThumbnailsDown(mapInfluencedRows.values(rowId));
+            diversityIndex = rowId;
+            tabManager(0);
+        } else{
+            tabManager(1);
+        }
+    } else {
+        tmp->setWindowTitle("0");
+        tmp->setStyleSheet(" QPushButton { background: black; border: none }");
+        tabManager(1);
+    }
+}
+
+void OberonViewer::relevantImageClicked() {
+
+    QPushButton *tmp = (QPushButton *)sender();
+    tmp->setFlat(false || (!tmp->isFlat()));
+
+    if (!tmp->isFlat()){
+        tmp->setStyleSheet(" QPushButton { background: black; border:2px solid #81a10e }");
+        tmp->setWindowTitle("1");
+        ui->lblDetails->setText(tmp->toolTip());
+    } else {
+        tmp->setWindowTitle("0");
+        tmp->setStyleSheet(" QPushButton { background: black; border: none }");
+    }
+}
+
+void OberonViewer::loadThumbnailsMyList(){
+
+    int pos, pos2;
+
+    for (size_t x = 0; x < thumbsImagesMyList.size(); x++){
+        QPushButton *tmp = thumbsImagesMyList[x];
+        ui->lytDiversity->removeItem(ui->lytMyList->itemAt(ui->lytMyList->indexOf(tmp)));
+        delete (tmp);
+    }
+    thumbsImagesMyList.clear();
+    ui->lytMyList->update();
+    ui->scrollAreaMyList->update();
+
+    for (size_t x = 0; x < myList.size() ; x++){
+        QPushButtonAlter *btn = new QPushButtonAlter(ui->scrollAreaMyList);
+        connect(btn, SIGNAL(rightClicked()), this, SLOT(unRelevantImageClickedMyList()));
+        connect(btn, SIGNAL(leftDoubleClicked()), this, SLOT(changeCenterImage()));
+
+        pos = rInfset.locateImageID();
+        pos2 = rInfset.locateFirstRow(QString::number(myList[x]), pos);
+
+        btn->prepare(mapOidToNames[myList[x]].c_str());
+        btn->setWhatsThis(QString::number(myList[x]));
+        btn->setToolTip(toolTipBuilder(rInfset, pos2));
+
+        ui->lytMyList->addWidget(btn,0,x);
+        thumbsImagesMyList.push_back(btn);
+        ui->lytMyList->setColumnMinimumWidth(x,120);
+    }
+    ui->lytMyList->update();
+    ui->scrollAreaMyList->update();
+}
+
+/**
+* Set tabs according to the diversity and the mylist of results.
+* 0 - Diversity image clicked
+* 1 - Diversity image non-clicked
+* 2 - Add a new image to my list
+* 3 - Remove a image from my list
+*/
+void OberonViewer::tabManager(uint8_t operation){
+
+    switch(operation){
+    case 0: {
+        if(!ui->lstInfluencedImages->isEnabled()){
+            ui->tabWidget->insertTab(0, tabs[0], QString("List of influenced images"));
+            ui->lstInfluencedImages->setEnabled(true);
+            ui->tabWidget->show();
+        }
+        ui->tabWidget->setCurrentIndex(0);
+        break;
+    }
+    case 1: {
+        if(myList.size() != 0){
+            if(ui->lstInfluencedImages->isEnabled())
+                ui->tabWidget->removeTab(0);
+        }else{
+            ui->tabWidget->clear();
+            ui->tabWidget->hide();
+            ui->lstMyList->setEnabled(false);
+        }
+        ui->lstInfluencedImages->setEnabled(false);
+        break;
+    }
+    case 2: {
+        if(!ui->lstMyList->isEnabled()){
+            ui->tabWidget->insertTab(1, tabs[1], QString("My list of relevant images"));
+            ui->lstMyList->setEnabled(true);
+            ui->tabWidget->show();
+        }
+        break;
+    }
+    case 3: {
+        if(myList.size() == 0){
+            if(ui->lstInfluencedImages->isEnabled())
+                ui->tabWidget->removeTab(1);
+            else
+                ui->tabWidget->removeTab(0);
+
+            ui->lstMyList->setEnabled(false);
+            if(thumbsImagesDown.size() == 0){
+                ui->tabWidget->removeTab(0);
+                ui->tabWidget->clear();
+                ui->tabWidget->hide();
+                ui->lstInfluencedImages->setEnabled(false);
+            }
+        }
+        break;
+    }
+    }
+}
+
+void OberonViewer::loadThumbnailsDown(QList<uint16_t> rowIds){
+
+    int posId;
+
+    //Clear images inside lytDiversity
+    for (size_t x = 0; x < thumbsImagesDown.size(); x++){
+        QPushButton *tmp = thumbsImagesDown[x];
+        ui->lytDiversity->removeItem(ui->lytDiversity->itemAt(ui->lytDiversity->indexOf(tmp)));
+        delete (tmp);
+    }
+    thumbsImagesDown.clear();
+    ui->lytDiversity->update();
+    ui->scrollAreaInfluenced->update();
+
+    posId = rInfset.locateImageID();
+    for (int x = 0; x < rowIds.size(); x++){
+        //Discard unrelevant images...
+        bool removed = false;
+        for(size_t y = 0; ((!removed) && (y < removedListOfIds.size())); y++){
+            removed = (rInfset.fetchByColumnId(rowIds.at(x), posId).toUInt() == removedListOfIds[y]);
+        }
+
+        if(!removed){
+            QPushButtonAlter *btn = new QPushButtonAlter(ui->scrollAreaInfluenced);
+            connect(btn, SIGNAL(clicked()), this, SLOT(relevantImageClickedAddMyList()));
+            connect(btn, SIGNAL(rightClicked()), this, SLOT(unRelevantImageClickedDown()));
+            connect(btn, SIGNAL(leftDoubleClicked()), this, SLOT(changeCenterImage()));
+
+            btn->prepare(mapOidToNames[rInfset.fetchByColumnId(rowIds.at(x), posId).toUInt()].c_str());
+            btn->setWhatsThis(rInfset.fetchByColumnId(rowIds.at(x), posId));
+            btn->setToolTip(toolTipBuilder(rInfset, rowIds.at(x)));
+
+            //Highlights images in the user-selected list
+            bool favorite = false;
+            for(size_t y = 0; ((!favorite) && (y < myList.size())); y++){
+                favorite = (rInfset.fetchByColumnId(rowIds.at(x), posId).toUInt() == myList[y]);
+            }
+            if(!favorite){
+                btn->setFlat(true);
+            } else {
+                btn->setStyleSheet(" QPushButton { background: black; border:2px solid #81a10e }");
+                btn->setFlat(false);
+            }
+
+            ui->lytDiversity->addWidget(btn,0,x);
+            thumbsImagesDown.push_back(btn);
+            ui->lytDiversity->setColumnMinimumWidth(x,120);
+        }
+    }
+    ui->lytDiversity->update();
+    ui->scrollAreaInfluenced->update();
+}
+
+void OberonViewer::relevantImageClickedAddMyList(){
+
+    QPushButton *tmp = (QPushButton *)sender();
+    uint32_t x = tmp->whatsThis().toUInt();
+    tmp->setFlat(false || (!tmp->isFlat()));
+
+    if (!tmp->isFlat()){
+        myList.push_back(x);
+        loadThumbnailsMyList();
+        tmp->setStyleSheet(" QPushButton { background: black; border:2px solid #81a10e }");
+        tmp->setWindowTitle("1");
+        tabManager(2);
+        ui->lblDetails->setText(tmp->toolTip());
+    } else {
+        tmp->setWindowTitle("0");
+        tmp->setStyleSheet(" QPushButton { background: black; border: none }");
+        std::vector<uint32_t> aux;
+        for(size_t i = 0; i < myList.size(); i++){
+            if(myList[i] != x)
+                aux.push_back(myList[i]);
+        }
+        myList = aux;
+        loadThumbnailsMyList();
+        tabManager(3);
+    }
+}
+
+void OberonViewer::unRelevantImageClickedDown(){
+
+    QPushButton *tmp = (QPushButton *)sender();
+    tmp->setFlat(false || (!tmp->isFlat()));
+    uint32_t OID = tmp->whatsThis().toUInt();
+
+    if (!tmp->isFlat()){
+        std::vector<QPushButton *> aux;
+        for (size_t x = 0; x < thumbsImagesDown.size(); x++){
+            if (x != ui->lytDiversity->indexOf(tmp)){
+                aux.push_back(thumbsImagesDown[x]);
+            }
+        }
+        thumbsImagesDown.clear();
+        thumbsImagesDown = aux;
+
+        ui->lytDiversity->removeItem(ui->lytDiversity->itemAt(ui->lytDiversity->indexOf(tmp)));
+        removedListOfIds.push_back(OID);
+        std::vector<uint32_t> auxList;
+        for(size_t i = 0; i < myList.size(); i++){
+            if(myList[i] != OID){
+                auxList.push_back(myList[i]);
+            }
+        }
+        myList = auxList;
+        loadThumbnailsMyList();
+        tabManager(3);
+
+        delete (tmp);
+    } else {
+        tmp->setWindowTitle("0");
+        tmp->setStyleSheet(" QPushButton { background: black; border: none }");
+    }
+}
+
+void OberonViewer::unRelevantImageClickedMyList(){
+
+    QPushButton *tmp = (QPushButton *)sender();
+    tmp->setFlat(false || (!tmp->isFlat()));
+    uint32_t OID = tmp->whatsThis().toUInt();
+
+    if (!tmp->isFlat()){
+        std::vector<QPushButton *> auxButton;
+        for (size_t i = 0; i < thumbsImagesMyList.size(); i++){
+            if (i != ui->lytMyList->indexOf(tmp)){
+                auxButton.push_back(thumbsImagesMyList[i]);
+            }
+        }
+        thumbsImagesMyList.clear();
+        thumbsImagesMyList = auxButton;
+
+        removedListOfIds.push_back(OID);
+        std::vector<uint32_t> aux;
+        for(size_t i = 0; i < myList.size(); i++){
+            if(myList[i] != OID)
+                aux.push_back(myList[i]);
+        }
+        myList = aux;
+        loadThumbnailsMyList();
+        tabManager(3);
+
+        //Reload thumbnails down panel
+        if (mapInfluencedRows.values(diversityIndex).size()){
+            loadThumbnailsDown(mapInfluencedRows.values(diversityIndex));
+            tabManager(3);
+        }else{
+            tabManager(1);
+        }
+
+        delete(tmp);
+    } else {
+        tmp->setWindowTitle("0");
+        tmp->setStyleSheet(" QPushButton { background: black; border: none }");
+    }
+}
+
+
+
+OberonViewer::~OberonViewer(){
+
+    clearAllThumbnails();
+    clearResultSets();
+
+    mapInfluencedRows.clear();
+    myList.clear();
+    removedListOfIds.clear();
+
+    if(queryImage  != currentImage && queryImage != nullptr){
+        delete(queryImage);
+        delete (currentImage);
+        queryImage = nullptr;
+        currentImage = nullptr;
+    } else {
+        if (queryImage != nullptr){
+            delete queryImage;
+            queryImage = nullptr;
+        }
+    }
+
+    for (auto const& x : mapOidToNames){
+        remove(x.second.c_str());
+        remove((x.second + "_thumb.jpg").c_str());
+    }
+
+    for (auto const& x : mapOidToNames){
+        QFileInfo info(x.second.c_str());
+        QDir dir(info.dir().path());
+        if (dir.exists()){
+            dir.rmpath(".");
+        }
+    }
+    mapOidToNames.clear();
+
+    delete (ui);
+}
+
+
+
+void OberonViewer::on_btnZoomIn_clicked(){
+
+    double scale = (double) (ui->lblCenter->pixmap()->width() / (400.0));
+
+    if (scale < 5.0) {
+        int size = (int) 600*scale;
+        fillQueryCenter(currentImage, size);
+        ui->lblCenter->setMinimumWidth(size);
+        ui->lblCenter->setMinimumHeight(size);
+    }
+
+    ui->gridLayout_3->removeWidget(ui->lblCenter);
+    ui->gridLayout_3->addWidget(ui->lblCenter);
+    ui->gridLayout_3->update();
+    ui->scrollArea->update();
+
+    showWindowing();
+}
+
+
+void OberonViewer::on_btnExit_clicked(){
+
+    this->close();
+}
+
+
+void OberonViewer::on_btnZoomOut_clicked(){
+
+    double scale = (double) (ui->lblCenter->pixmap()->width() / (800.0));
+
+    if (600*scale > 600) {
+        uint32_t size = (uint32_t) 600*scale;
+        ui->lblCenter->setPixmap(ui->lblCenter->pixmap()->scaled(size, size));
+        //Re-size QLabelSize
+        ui->lblCenter->setMinimumWidth(size);
+        ui->lblCenter->setMinimumHeight(size);
+    } else {
+        ui->lblCenter->setPixmap(ui->lblCenter->pixmap()->scaled(600, 600));
+        //Re-size QLabelSize
+        ui->lblCenter->setMinimumWidth(600);
+        ui->lblCenter->setMinimumHeight(600);
+    }
+
+    //Updates the QLabel on the QScrollArea
+    ui->gridLayout_3->removeWidget(ui->lblCenter);
+    ui->gridLayout_3->addWidget(ui->lblCenter);
+    ui->gridLayout_3->update();
+    ui->scrollArea->update();
+}
+
+
+void OberonViewer::on_btnPDF_clicked(){
+
+    QString fileName = "dicom2pdf.pdf";
+
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setOutputFileName(fileName);
+
+    QPainter painter(&printer);
+    painter.drawText(0, 0, "Exported DICOM image provided by CBMIR Higiia.");
+    painter.drawPixmap(0, 400, 8000, 8000, ui->lblCenter->pixmap()->scaled(8000, 8000));
+    painter.end();
+
+    QFile pdfFile(fileName);
+    pdfFile.open(QIODevice::ReadOnly);
+    QByteArray content = pdfFile.readAll();
+
+    QFileDialog::saveFileContent(content, fileName);
+}
+
+Image* OberonViewer::windowing(int width, int center){
+
+    Image *aux = (Image*) currentImage->clone();
+
+    int32_t numBins = (int32_t) pow(2, aux->getBitsPerPixel());
+    float grayScale[numBins];
+
+    int32_t lowestVisibleValue = (center - ( (double) width/ (double) 2.0));
+    int32_t highestVisibleValue = (center + ( (double) width/ (double) 2.0));
+
+    for (int32_t x = 0; x < numBins; x++) {
+        if (x <=  lowestVisibleValue){
+            grayScale[x] = lowestVisibleValue;
+        } else {
+            if (x >= highestVisibleValue){
+                grayScale[x] = highestVisibleValue;
+            } else {
+                grayScale[x] = ((x - (center - 0.5)) / (width - 1) + 0.5) * (highestVisibleValue - lowestVisibleValue) + lowestVisibleValue;
+            }
+        }
+    }
+    aux->deletePixelMatrix();
+    aux->createPixelMatrix(currentImage->getWidth(), currentImage->getHeight());
+
+    for (size_t x = 0; x < aux->getWidth(); x++){
+        for (size_t y = 0; y < aux->getHeight(); y++){
+            Pixel *p;
+            if (currentImage->getPixel(x, y).getGrayPixelValue() == 4095){
+                p =  new Pixel(currentImage->getPixel(x, y).getGrayPixelValue());
+            } else {
+                p = new Pixel(grayScale[(uint32_t) currentImage->getPixel(x, y).getGrayPixelValue()]);
+            }
+            aux->setPixel(x, y, *p);
+            delete (p);
+        }
+    }
+
+    return aux;
+}
+
+void OberonViewer::adjustSliders(){
+
+    if (currentImage->type() == Image::DICOM || currentImage->type() == Image::KRL){
+
+        ui->sliderCenter->setEnabled(true);
+        ui->sliderWidth->setEnabled(true);
+
+        if (!ui->cbxWindowing->currentIndex()){
+            ui->sliderCenter->setMaximum(currentImage->getWindowCenter() + 2000);
+            ui->sliderCenter->setMinimum(currentImage->getWindowCenter() - 2000);
+            ui->sliderCenter->setValue(currentImage->getWindowCenter());
+            ui->sliderCenter->setPageStep(30);
+            ui->sliderCenter->setSingleStep(30);
+
+            ui->sliderWidth->setMaximum(currentImage->getWindowWidth() + 2000);
+            ui->sliderWidth->setMinimum(currentImage->getWindowWidth() - 2000);
+            ui->sliderWidth->setValue(currentImage->getWindowWidth());
+            ui->sliderWidth->setPageStep(30);
+            ui->sliderWidth->setSingleStep(30);
+        } else {
+            ui->sliderCenter->setMaximum(WindowingInterval::getCenter((uint8_t) ui->cbxWindowing->currentIndex()) +
+                                         WindowingInterval::getMargin((uint8_t) ui->cbxWindowing->currentIndex()));
+            ui->sliderCenter->setMinimum(WindowingInterval::getCenter((uint8_t) ui->cbxWindowing->currentIndex()) -
+                                         WindowingInterval::getMargin((uint8_t) ui->cbxWindowing->currentIndex()));
+            ui->sliderCenter->setValue(WindowingInterval::getCenter((uint8_t) ui->cbxWindowing->currentIndex()));
+            ui->sliderCenter->setPageStep(WindowingInterval::getStep((uint8_t) ui->cbxWindowing->currentIndex()));
+            ui->sliderCenter->setSingleStep(WindowingInterval::getStep((uint8_t) ui->cbxWindowing->currentIndex()));
+
+            ui->sliderWidth->setMaximum(WindowingInterval::getWidth((uint8_t) ui->cbxWindowing->currentIndex()) +
+                                         WindowingInterval::getMargin((uint8_t) ui->cbxWindowing->currentIndex()));
+            ui->sliderWidth->setMinimum(WindowingInterval::getWidth((uint8_t) ui->cbxWindowing->currentIndex()) -
+                                         WindowingInterval::getMargin((uint8_t) ui->cbxWindowing->currentIndex()));
+            ui->sliderWidth->setValue(WindowingInterval::getWidth((uint8_t) ui->cbxWindowing->currentIndex()));
+            ui->sliderWidth->setPageStep(WindowingInterval::getStep((uint8_t) ui->cbxWindowing->currentIndex()));
+            ui->sliderWidth->setSingleStep(WindowingInterval::getStep((uint8_t) ui->cbxWindowing->currentIndex()));
+        }
+
+    } else {
+        ui->sliderCenter->setEnabled(false);
+        ui->sliderWidth->setEnabled(false);
+    }
+}
+
+void OberonViewer::showWindowing(){
+
+    Image *i = windowing(ui->sliderWidth->value(), ui->sliderCenter->value());
+    QImage *img;
+
+    img = Util::convertImageToQImage(i);
+    ui->lblCenter->setPixmap(QPixmap::fromImage(img->scaled(ui->lblCenter->pixmap()->width(), ui->lblCenter->pixmap()->height())));
+
+    delete (i);
+    delete (img);
+}
+
+void OberonViewer::clearAllThumbnails(){
+
+    for (size_t x = 0; x < thumbsImagesDown.size(); x++){
+        QPushButton *tmp = thumbsImagesDown[x];
+        ui->lytDiversity->removeItem(ui->lytDiversity->itemAt(ui->lytDiversity->indexOf(tmp)));
+        delete (tmp);
+    }
+    thumbsImagesDown.clear();
+
+    for (size_t x = 0; x < thumbsImagesRight.size(); x++){
+        QPushButton *tmp = thumbsImagesRight[x];
+        ui->gridLayout_5->removeItem(ui->gridLayout_5->itemAt(ui->gridLayout_5->indexOf(tmp)));
+        delete (tmp);
+    }
+    thumbsImagesRight.clear();
+
+    for (size_t x = 0; x < thumbsImagesMyList.size(); x++){
+        QPushButton *tmp = thumbsImagesMyList[x];
+        ui->lytDiversity->removeItem(ui->lytMyList->itemAt(ui->lytMyList->indexOf(tmp)));
+        delete (tmp);
+    }
+    thumbsImagesMyList.clear();
+}
+
+void OberonViewer::clearResultSets(){
+
+    rSet.clear();
+    tempRInfset.clear();
+    rInfset.clear();
+}
+
+void OberonViewer::on_sliderCenter_sliderReleased(){
+
+    on_sliderWidth_sliderReleased();
+}
+
+
+void OberonViewer::on_sliderWidth_sliderReleased(){
+
+    showWindowing();
+    ui->gridLayout_3->removeWidget(ui->lblCenter);
+    ui->gridLayout_3->addWidget(ui->lblCenter);
+    ui->gridLayout_3->update();
+    ui->scrollArea->update();
+}
+
+
+void OberonViewer::on_btnQueryCenter_clicked(){
+
+    if(currentImage != queryImage){
+        delete currentImage;
+    }
+
+    currentImage = queryImage;
+    adjustSliders();
+    fillQueryCenter(currentImage);
+}
+
+
+
+void OberonViewer::on_btnRestart_clicked(){
+
+    ui->lblServerSetup->setText("Restarting, please wait ...");
+
+    //Lock screen widgets...
+    ui->tabWidget->hide();
+    ui->lytCentral->setEnabled(false);
+
+    //Clear current variables, except result sets ...
+    clearAllThumbnails();
+    myList.clear();
+    removedListOfIds.clear();
+
+    if(queryImage  != currentImage && queryImage != nullptr){
+        delete(queryImage);
+        delete (currentImage);
+        queryImage = nullptr;
+        currentImage = nullptr;
+    }else{
+        if (queryImage != nullptr){
+            delete queryImage;
+            queryImage = nullptr;
+        }
+    }
+
+    fillThumbnails();
+
+    //Unlock screen
+    ui->lytCentral->setEnabled(true);
+    ui->lblServerSetup->setText("CBIR is ready!");
+}
+
+
+void OberonViewer::on_btnFeedback_clicked(){
+
+    if (ui->txtKnn->text().isEmpty()){
+        ui->lblServerSetup->setText("Invalid search parameters!");
+        return;
+    }
+
+    std::vector<uint32_t> relevants;
+    QString tblName, condition, sqlQuery;
+    SirenSQLQuery buildRelevants, buildNonRelevants;
+
+    for (int x = 0; x < ui->gridLayout_5->count(); x++){
+        QLayoutItem * const item = ui->gridLayout_5->itemAt(x);
+        if (item->widget()->windowTitle().toStdString() == "1"){
+            relevants.push_back(item->widget()->whatsThis().toUInt());
+        }
+    }
+
+    if (relevants.empty() && removedListOfIds.empty()){
+        ui->lblServerSetup->setText("Invalid search parameters!");
+        return;
+    }
+
+    ui->lblServerSetup->setText("Cycling, please wait...");
+
+    //Lock screen widgets...
+    ui->tabWidget->hide();
+    ui->lytCentral->setEnabled(false);
+
+    if (vTable){
+        tblName = "temp";
+    } else {
+        tblName = tableName;
+    }
+
+
+    if (!relevants.empty()){
+        buildRelevants.addProjectionList( {"rf$PPV$" + tableName + "_"+ simAttribute + "."+ simAttribute, "'0' "});
+        if (vTable){
+            buildRelevants.addTable("( " + vTableName + " ) AS " + tblName);
+        } else {
+            buildRelevants.addTable(tableName);
+        }
+        buildRelevants.addJoin("PPV$" + tableName + "_"+ simAttribute + " AS rf$PPV$" + tableName + "_"+ simAttribute, "rf$PPV$" + tableName + "_"+ simAttribute + "." + simAttribute + "_id = " + tblName + "." + simAttribute);
+        condition = tblName + ".Id IN ( ";
+        for (size_t x = 0; x < relevants.size(); x++){
+            if (x > 0){
+                condition += ", ";
+            }
+            condition += QString::number(relevants[x]);
+        }
+        condition += ") ";
+        buildRelevants.addWhereAttribute(condition);
+        sqlQuery = buildRelevants.generateQuery();
+    }
+
+    if (!removedListOfIds.empty() && !relevants.empty()){
+        sqlQuery += "UNION ";
+    }
+
+    if (!removedListOfIds.empty()){
+        buildNonRelevants.addProjectionList( {"rf$PPV$" + tableName + "_"+ simAttribute + "."+ simAttribute, "'1' "});
+        if (vTable){
+            buildNonRelevants.addTable("( " + vTableName + " ) AS " + tblName);
+        } else {
+            buildNonRelevants.addTable(tableName);
+        }
+        buildNonRelevants.addJoin("PPV$" + tableName + "_"+ simAttribute + " AS rf$PPV$" + tableName + "_"+ simAttribute, "rf$PPV$" + tableName + "_"+ simAttribute + "." + simAttribute + "_id = " + tblName + "." + simAttribute);
+        condition = tblName + ".Id IN ( ";
+        for (size_t x = 0; x < removedListOfIds.size(); x++){
+            if (x > 0){
+                condition += ", ";
+            }
+            condition += QString::number(removedListOfIds[x]);
+        }
+        condition += ")";
+        buildNonRelevants.addWhereAttribute(condition);
+        sqlQuery = buildNonRelevants.generateQuery();
+    }
+    relevants.clear();
+
+    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state06);
+    webSocket->sendBinaryMessage(sqlQuery.toStdString().c_str());
+}
+
+
+void OberonViewer::state06(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state06);
+
+    MedicalImageTable tempSet(Util::toStringList(message.split('\n')));
+    FeatureVector newOq, oi;
+    float sumRelevants, sumNotRelevants, scaleFactor;
+    QString queryObjectValue, condition, tblName;
+    SirenSQLQuery queryT;
+
+    if (!tempSet.size()){
+        //Unlock screen
+        ui->lytCentral->setEnabled(true);
+        ui->lblServerSetup->setText("Empty result set!");
+        return;
+    }
+
+
+    int pos = tempSet.locateColumn(simAttribute);
+    sumRelevants = sumNotRelevants = 0;
+    for (int y = 0; y < tempSet.size(); y++){
+        if (tempSet.fetchByColumnId(y, ((pos+1)%2)) == "0"){
+            sumRelevants += 1.0;
+        } else {
+            sumNotRelevants += 1.0;
+        }
+    }
+    scaleFactor = 1.0;
+    if (sumRelevants > 0.0){
+        scaleFactor += 1.0;
+    }
+    if (sumNotRelevants > 0.0){
+        scaleFactor += 0.5;
+    }
+
+    //Rocchio-Method alpha = 1, beta = 1/2
+    newOq.setOID(0);
+    for (size_t x = 0; x < oq.size(); x++){
+        newOq.add(oq[x]);
+        for (int y = 0; y < tempSet.size(); y++){
+            oi.unserializeFromString(FeatureVector::fromBase64(tempSet.fetchByColumnId(y, pos).toStdString()));
+            if (tempSet.fetchByColumnId(y, ((pos+1)%2)) == "0"){
+                //relevantes
+                newOq[x] += (oi[x] / sumRelevants);
+            } else {
+                //nao relevantes
+                newOq[x] -= (oi[x] / (2.0*sumNotRelevants));
+            }
+        }
+        newOq[x] /= scaleFactor;
+    }
+
+    //Builds new query center
+    queryObjectValue = " { ";
+    for (size_t x = 0; x < newOq.size(); x++){
+        if (x > 0)
+            queryObjectValue += ", ";
+        queryObjectValue += QString::number(*newOq.get(x));
+    }
+    queryObjectValue += " }";
+
+    if (vTable){
+        tblName = "temp";
+    } else {
+        tblName = tableName;
+    }
+
+    //Builds query
+    QStringList scope = scopeAttributes.split(",");
+    for (int x = 0; x < scope.size(); x++){
+        queryT.addProjectionAttribute(scope.at(x).simplified());
+    }
+    queryT.addProjectionList({tblName + ".Filename Filename", tblName + ".Id Id"});
+    if (vTable){
+        queryT.addTable("( " + vTableName + " ) AS temp ");
+    } else {
+        queryT.addTable(tblName);
+    }
+    condition += tblName +"."+ simAttribute;
+    if (searchType == Util::SIMILARITY_SEARCH){
+        condition += " NEAR ";
+    } else {
+        if (searchType == Util::DIVERSITY_SEARCH){
+            condition += " DIVERSITY NEAR ";
+        } else {
+            condition += " DIVERSIFIED NEAR ";
+        }
+    }
+    condition += queryObjectValue;
+    condition += " BY "+ metricName + " STOP AFTER " + ui->txtKnn->text();
+    if (searchType == Util::BRIDGE_SEARCH){
+        condition += " BRIDGE " + ui->txtBridge->text();
+    }
+    queryT.addWhereAttribute(condition);
+    queryT.addOrderByAttribute(tblName + ".Id");
+
+    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state07);
+    webSocket->sendBinaryMessage(queryT.generateQuery().toStdString().c_str());
+}
+
+void OberonViewer::state07(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state07);
+
+    //Clear current variables, including result sets ...
+    ui->lblServerSetup->setText("Rebuilding, please wait ...");
+    clearAllThumbnails();
+    clearResultSets();
+    mapInfluencedRows.clear();
+    myList.clear();
+    removedListOfIds.clear();
+    mapOidToNames.clear();
+
+
+    if(queryImage  != currentImage && queryImage != nullptr){
+        delete(queryImage);
+        delete (currentImage);
+        queryImage = nullptr;
+        currentImage = nullptr;
+    }else{
+        if (queryImage != nullptr){
+            delete queryImage;
+            queryImage = nullptr;
+        }
+    }
+
+    rSet.clear();
+    rInfset.clear();
+    tempRInfset.clear();
+
+    rSet = MedicalImageTable(Util::toStringList(message.split('\n')));
+    splitResultSets();
+}
+
+
+void OberonViewer::on_cbxWindowing_currentIndexChanged(int index){
+
+    adjustSliders();
+    showWindowing();
+}
+
