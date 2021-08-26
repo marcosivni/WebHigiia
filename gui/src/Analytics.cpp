@@ -105,7 +105,7 @@ void Analytics::state01(QByteArray message){
     posCaption= scopeV.locateColumn("caption");
 
     //Load caption for user-defined scope...
-    for (int x = 1; x < scopeV.size(); x++){
+    for (int x = 0; x < scopeV.size(); x++){
         scopeCaption.addEntry(scopeV.fetchByColumnId(x, posAtt), scopeV.fetchByColumnId(x, posValue), scopeV.fetchByColumnId(x, posCaption));
     }
 
@@ -483,7 +483,7 @@ FeatureVectorList Analytics::pca2D(){
         oi.unserializeFromString(FeatureVector::fromBase64(rSet.fetchByColumnId(x, colInfluenced).toStdString()));
         dataset.push_back(oi);
     }
-    //Inserir oq at the end
+    //Insert oq at the end
     dataset.push_back(oq);
 
     size_t cardinality = dataset.size();
@@ -669,7 +669,7 @@ QString Analytics::buildOqScope(){
         if (scopeCaption.findCaption(scopeAtts[x], prediction, &caption)){
             answer += " = " + QString(caption.c_str());
         }
-        answer += " ~" + QString::number((maxFrequency/sumFrequency)*100.0, 'f', 2) + " of similar cases";
+        answer += " ~" + QString::number((maxFrequency/sumFrequency)*100.0, 'f', 2) + "% of similar cases";
 
         values.clear();
         frequencies.clear();
@@ -699,7 +699,7 @@ QString Analytics::buildOqStats(){
     answer += QString::number(oq.GetOID()) + "\n";
 
     sumDist = sumPoints = 0.0;
-    for (int x = 0; x < targets.size(); x++){
+    for (int x = 1; x < nSeries; x++){
         const auto points = seriesByTarget[x]->points();
         for (const QPointF &currentPoint : points) {
             sumDist += L2ToOqPCA(currentPoint);
@@ -715,7 +715,7 @@ QString Analytics::buildOqStats(){
     QList<uint16_t> keys = mapInfluencedRows.uniqueKeys();
 
     sumPoints = 0.0;
-    for (int x = 0; x < targets.size(); x++){
+    for (int x = 1; x < nSeries; x++){
         sumPoints += seriesByTarget[x]->count();
     }
     if (!keys.size()) {
