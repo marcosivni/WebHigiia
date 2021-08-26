@@ -48,7 +48,7 @@ Higiia client tool relies on a series of background technologies and 3rd-party l
 2.  3rd-party libraries (self-contained)
     - [Hermes][hermes] - Our own C++ library of distance functions (and utils).
     - [Artemis][artemis] - Our own wrapper library for images (and utils).
-    - [Dicomlib][dicomlib] - The classical self-contained Trevor Morgan dicomlib library from Google Code Archive (Thank you Trevor, we were able to compile it with brand new Emscripten 😀 - Classic codes die hard).
+    - [Dicomlib][dicomlib] - The classical self-contained Trevor Morgan dicomlib library from Google Code Archive (We were able to compile it with brand new Emscripten 😀 - Classic codes die hard).
     - [Boost][boost] - A few Boost .h files (without the need for compiling the entire library) - wasm-compliant.
     - [Eigen][eigen] - A few Eigen .h files (without the need for compiling the entire library) - wasm-compliant.
 
