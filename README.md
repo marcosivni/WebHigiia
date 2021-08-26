@@ -3,7 +3,7 @@
 
 ## _A domainless Content-Based Medical Image Retrieval tool for CT and RX_
 
-Higiia is a Content-Based Medical Image Retrieval (CBMIR) tool designed for handling any domain of CT and RX images. The version (v2.0) in this repository was coded in C++ with Qt SDK (5.15.1 - LGPL-license) and it is fully compatible with Web Assembly (emscripten coupled to Qt 5.15.1 through em++ compiler v2.0.22).
+Higiia is a Content-Based Medical Image Retrieval (CBMIR) tool designed for handling any domain of CT and RX images. This version was coded in C++ with Qt SDK (5.15.1 - LGPL-license) and it is fully compatible with Web Assembly (emscripten coupled to Qt 5.15.1 with em++ compiler v2.0.22).
 
 It supports JPEG, PNG, BMP, and (most important) KRL and DICOM medical images by using self-contained 3rd-party libraries (see below). The query mechanism is provided by a counter-part that supports an extended SQL language and can be configured as an external server (see [The Siren Project][siren]), while external client-server applications can be used for managing medical image storage (see [QWebSocket File Transfer Project][ws]. As a result, the Higiia v2.0 implementation follows a simplified Model–View–Controller software pattern, in which a set of pre-defined tables and classes are employed for accessing and querying medical image datasets.
 
