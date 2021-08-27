@@ -1,6 +1,9 @@
-# Regular os files
+# Regular files
 /3rd-party
 *~
+WASM_Higiia.pro
+Transfer.bat
+
 
 # C++ objects and libs
 *.slo

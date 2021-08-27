@@ -4,7 +4,6 @@
 
 //GUI includes
 #include <Login.h>
-#include <Analytics.h>
 
 int main(int argc, char *argv[])
 {
@@ -17,9 +16,6 @@ int main(int argc, char *argv[])
     if (webSocket.isValid()){
         webSocket.close();
     }
-
-//    Analytics an;
-//    an.showMaximized();
 
     return a.exec();
 }
