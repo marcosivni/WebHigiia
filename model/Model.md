@@ -81,7 +81,7 @@ INSERT INTO Mammogram VALUES (1, 1, 'mammo/usf0001_RMLO_L1_MS_M.jpg', 'Patient 4
 INSERT INTO Mammogram VALUES (7, 1, 'mammo/usf0007_RCC_L1_MS_M.jpg', 'Patient 5', {0.55, 0.49, 0.37}, 'right craniocauda', 'Mass', 6, 2, 5);
 ```
 
-> After the insertion of dataset elements, Higiia can query images by content (following the multidimensional features and the user-defined metrics). Nevertheless, we must assign the query objects (potentially undiagnosed images) as well as the users that can access them.
+> After the insertion of dataset elements, Higiia can query images by content (following the multidimensional features and the user-defined metrics). Nevertheless, we must assign the query objects (potentially undiagnosed images) to the users that can access them.
 
 ## Prepare for querying
 
@@ -202,7 +202,7 @@ WHERE Mammogram.PcaF NEAR  {0.54, 0.535, 0.435}
 ORDER BY (Mammogram.Id);
 ```
 
-> The Rocchio relevance feedback method ''sifts'' the query element in the search space according to relevant and non-relevant neighbors. IN the example it went from (0.57, 0.53, 0.47) to (0.54, 0.535, 0.435).
+> The Rocchio relevance feedback method ''sifts'' the query element in the search space according to relevant and non-relevant neighbors. In the example, it went from (0.57, 0.53, 0.47) to (0.54, 0.535, 0.435).
 
 A variant of the first query would be retrieving up to *three* neighbors to the query element (*'mammo/query_example_2.krl'*) with *biRads = 2* (Benign), which would filter the search space towards a proper `Scope` attribute. The result for this search is presented below. Please, notice we loaded only five images with one having *biRads = 2*.
 
