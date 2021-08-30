@@ -127,24 +127,15 @@ Higiia is now ready to query the mammogram dataset.
 Upon entering into the system, Higiia loads the pool of query images so that the user can select one case and proceed. Next, the query parameters must be defined. Some important points to take note of:
 
 1. *Similarity Parameters*
-
-1.1 Search Type:
-
-1.1.1. `Similarity Search`: Executes a [classical and indexed *k*-Nearest Neighbor search][hetland].
-
-1.1.2. `Diversity Search`: Executes a fast [diversified][drosou] *k*-Nearest Neighbor search with [BRID][jasbick].
-
-1.1.3. `Bridged Similarity Search`: Executes a diversified *k*-Nearest Neighbor search by [grouping non-diversified elements][kundaha] with [BridGE][santos].
-
-1.2 Similarity Attribute: Indicates the `PARTICULATE` attribute employed for the building of the search space.
-
-1.3 Distance function: Indicates the search metric
-
-1.4 Relevance Feedback: Indicates the name of the Relevance Feedback method employed for query refinements
-
-1.5 Neighbors: The number of retrieved elements
-
-1.6 Max group size: The maximum number of clustered elements (Diversity and Bridged queries-only)
+- Search Type:
+- `Similarity Search`: Executes a [classical and indexed *k*-Nearest Neighbor search][hetland].
+- `Diversity Search`: Executes a fast [diversified][drosou] *k*-Nearest Neighbor search with [BRID][jasbick].
+- `Bridged Similarity Search`: Executes a diversified *k*-Nearest Neighbor search by [grouping non-diversified elements][kundaha] with [BridGE][santos].
+- Similarity Attribute: Indicates the `PARTICULATE` attribute employed for the building of the search space.
+- Distance function: Indicates the search metric
+- Relevance Feedback: Indicates the name of the Relevance Feedback method employed for query refinements
+- Neighbors: The number of retrieved elements
+- Max group size: The maximum number of clustered elements (Diversity and Bridged queries-only)
 
 2. `Scope` attributes can be used for filtering the content-based retrieval query. They are listed within the search ''Hypothesis'' combo-box.
 
@@ -157,36 +148,22 @@ Upon entering into the system, Higiia loads the pool of query images so that the
 6. A Content-Based Medical Image Retrieval query returns the result set in a Picture Archiving and Communication System (PACS)-like Viewer with windowing, zooming, and navigation tools. Depending on the search type, the following features are available.
 
 7. `Similarity Search` and `Diversity Search` features
-
-7.1 Putting the mouse upon an image of the result set enables the visualization of the annotation related to that specific result.
-
-7.2 Double-clicking brings the image from the result set to the center of the window.
-
-7.3 At the center of the window, the user can employ a high-contrast windowing operation for better visualization.
-
-7.4 Left-click triggers the exclusion of an image in the result set that is not relevant.
-
-7.5 Right-click enables you to mark an image in the result set as relevant.
-
-7.6 After labeling relevant and non-relevant images, you may request Rocchio-based relevance feedback cycles to explore other similar images.
+- Putting the mouse upon an image of the result set enables the visualization of the annotation related to that specific result.
+- Double-clicking brings the image from the result set to the center of the window.
+- At the center of the window, the user can employ a high-contrast windowing operation for better visualization.
+- Left-click triggers the exclusion of an image in the result set that is not relevant.
+- Right-click enables you to mark an image in the result set as relevant.
+- After labeling relevant and non-relevant images, you may request Rocchio-based relevance feedback cycles to explore other similar images.
 
 8. `Bridged Similarity Search`
-
-8.1 The representative images from strong influence sets are displayed on the right.
-
-8.2 Right-click expands and collapses a strong influence set.
-
-8.3 The list of representatives enables a result exploration from a diversity perspective, whereas the influence sets are kept sorted by similarity. Therefore, you can easily shift the exploration perspective from diversity to similarity.
-
-8.4 If an image is labeled as relevant, it is permanently kept in the "My List of Relevant Images" until you explicitly remove it.
-
-8.5 Images of strong influence sets can be dismissed with left-clicks. The entire influence set is dismissed if you discard the representative.
-
-8.6 Images labeled as relevant are kept in the "My List of Relevant Images".
-
-8.7 Diversified relevance feedback cycles shift the positioning of the query element by using the size of strong influence sets as another weight in the Rocchio-based relevant feedback algorithm.
-
-8.8 For each relevance feedback cycle, the retrieved images in the result set can be compared to others previously included in the "My List of Relevant Images".
+- The representative images from strong influence sets are displayed on the right.
+- Right-click expands and collapses a strong influence set.
+- The list of representatives enables a result exploration from a diversity perspective, whereas the influence sets are kept sorted by similarity. Therefore, you can easily shift the exploration perspective from diversity to similarity.
+- If an image is labeled as relevant, it is permanently kept in the "My List of Relevant Images" until you explicitly remove it.
+- Images of strong influence sets can be dismissed with left-clicks. The entire influence set is dismissed if you discard the representative.
+- Images labeled as relevant are kept in the "My List of Relevant Images".
+- Diversified relevance feedback cycles shift the positioning of the query element by using the size of strong influence sets as another weight in the Rocchio-based relevant feedback algorithm.
+- For each relevance feedback cycle, the retrieved images in the result set can be compared to others previously included in the "My List of Relevant Images".
 
 
 ## Query examples - Results and Background
@@ -269,7 +246,8 @@ ORDER BY (Mammogram.Id);
 
 Finally, the `Bridged Similarity Search` enables the retrieval of neighbors that are either *influencer objects* (i.e., outside the range of 'too similar' for any entry the result set) or *influenced objects* (i.e., within the range of 'too similar' to a result set entry). In other words, it also retrieves the elements discarded by the `Diversity Search`. The answer is presented hierarchically, in which *influenced objects* are placed below the *influencer images*. Therefore, the result set may contain *more* than *k* diversified and nearest neighbors.
 
-For instance, the search for up to *k = 5* diversified and nearest neighbors of the query element (*'mammo/query_example_2.krl'*) with `Bridged Similarity Search`return precisely *five* entries, but explicitly indicates one element is influenced by a result set entry (See Figure below).  
+For instance, the search for up to *k = 5* diversified and nearest neighbors of the query element (*'mammo/query_example_2.krl'*) with `Bridged Similarity Search`return precisely *five* entries, but explicitly indicates one element is influenced by a result set entry (See Figure below).
+
 ![Bridge Search](example/imgs/BridgeSearch.png)
 
 This result set was obtained by the following extended SQL command.
@@ -326,16 +304,16 @@ The **glossary** for Higiia Analytics are as follows:
 [//]: # (These are reference links used in the body of this note and get stripped out when the markdown processor does its job. There is no need to format nicely because it shouldn't be seen. Thanks SO - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-syntax)
 
    [siren]: <github.com/marcosivni/siren>
-   [higiiaddl]: <github.com/marcosivni/higiia/blob/main/model/Higiia_DDL.sql>
-   [mammo]: <github.com/marcosivni/higiia/tree/main/model/example/data/mammo>
-   [oq]: <github.com/marcosivni/higiia/blob/main/model/example/data/mammo/query_example_2.krl>
+   [higiiaddl]: <Higiia_DDL.sql>
+   [mammo]: <example/data/mammo>
+   [oq]: <example/data/mammo/query_example_2.krl>
    [hetland]: <https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.216.5538&rep=rep1&type=pdf>
    [drosou]: <https://www.cs.drexel.edu/~julia/documents/big.2016.0054.pdf>
    [jasbick]: <https://link.springer.com/chapter/10.1007/978-3-030-60936-8_11>
    [santos]: <https://ieeexplore.ieee.org/abstract/document/6881893>
-   [kundaha]: <github.com/marcosivni/kundaha>
+   [kundaha]: <https://github.com/marcosivni/kundaha>
    [brid]: <https://www.researchgate.net/profile/Lucio-Dutra-Santos/publication/262253340_Parameter-free_and_domain-independent_similarity_search_with_diversity/links/5ca4aea4299bf1b86d61d045/Parameter-free-and-domain-independent-similarity-search-with-diversity.pdf>
    [agg]: <https://eprints.ukh.ac.id/id/eprint/186/1/2015_Book_DataMining.pdf>
-   [mammoset]: <bitbucket.org/gbdi/mammoset/src/master/>
+   [mammoset]: <https://bitbucket.org/gbdi/mammoset/src/master/>
    [birads]: <https://www.acr.org/Clinical-Resources/Reporting-and-Data-Systems/Bi-Rads>
    

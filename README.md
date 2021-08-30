@@ -108,7 +108,7 @@ The directory tree is structured as follows.
    [dicomlib]: <github.com/marcosivni/dicomlib>
    [boost]: <https://www.boost.org/>
    [eigen]: <https://eigen.tuxfamily.org/>
-   [model]: <github.com/marcosivni/higiia/blob/main/model/Model.md>
+   [model]: <https://github.com/marcosivni/higiia/blob/main/model/Model.md>
    
 
 ![GitHub all releases](https://img.shields.io/github/downloads/marcosivni/higiia/total?style=flat-square)
