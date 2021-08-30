@@ -16,7 +16,7 @@ To set up your first CBMIR application supported by Higiia v2.0, the following s
 > You can use a simple telnet connection (i.e., telnet <siren-server-ip> <siren-server-port>) to submit the DDL script that contains standard SQL commands for the creation of the Higiia v2.0 Model tables.
 
 3. Structure your medical image dataset as an Higiia table and instantiate it on the server-side.
-> Please, refer to the [Higiia Modelling Guide][siren] to structure your medical dataset as an Higiia table. The modeling process will generate an extra table <U_dataset> in which queries will be placed.
+> Please, refer to the [Higiia Modelling Guide][model] to structure your medical dataset as an Higiia table. The modeling process will generate an extra table <U_dataset> in which queries will be placed.
 
 4. Load your **data** in the new dataset table, and the **queries** (potentially undiagnosed cases) in the Higiia automatically generated table.
 > Data are inserted with extended INSERT INTO commands. See this [example for a dataset of lung images][ws]. Notice, feature extraction can be carried out manually or with the support of your favorite programming language and framework, e.g., sklearn, pandas, etc.
@@ -108,6 +108,7 @@ The directory tree is structured as follows.
    [dicomlib]: <github.com/marcosivni/dicomlib>
    [boost]: <https://www.boost.org/>
    [eigen]: <https://eigen.tuxfamily.org/>
+   [model]: <github.com/marcosivni/higiia/blob/main/model/Model.md>
    
 
 ![GitHub all releases](https://img.shields.io/github/downloads/marcosivni/higiia/total?style=flat-square)

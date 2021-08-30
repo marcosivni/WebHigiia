@@ -3,24 +3,24 @@
 # Higiia Modeling Guide
 ## _Modeling your image dataset with examples_
 
-Higiia relies on a set of reserved tables and attributes for mapping dataset entries in a _framework_-like environment. Therefore, those tables must be created once in the server-side of the CBMIR application ([SIREN][siren]) before you start any Higiia client (A simple telnet connection (`telnet <siren-ip> <siren-port>`) allows you to feed the script to the server-side). The default creation script is available [here](www), and the relational representation of the tables are as follows:
+Higiia relies on a set of reserved tables and attributes for mapping dataset entries in a _framework_-like environment. Therefore, those tables must be created once in the server-side of the CBMIR application ([SIREN][siren]) before you start any Higiia client (A simple telnet connection (`telnet <siren-ip> <siren-port>`) allows you to feed the script to the server-side). The default creation script is available [here][higiiaddl], and the relational representation of the tables are as follows:
 
 ![Higiia base tables](example/imgs/HigiiaBaseTables.png)
 
-- Table Login: For users and passwords (will be deprecated as soon as QSsl gets supported by Emscripten)
-- Table Pool: Associates images to be queried with a given user
-- Scope: Defines which are the attributes of interest to be targeted by the CBMIR application (including labeling and visual mining)
-- Caption: Provides a textual explanation for the Scope attributes
+- Table Login: For users and passwords (will be deprecated as soon as QSsl gets supported by Emscripten).
+- Table Pool: Associates images to be queried with a given user.
+- Scope: Defines which are the attributes of interest to be targeted by the CBMIR application (including labeling and visual mining).
+- Caption: Provides a textual explanation for the Scope attributes.
 
 **WARNING** Both `Scope` and `Pool` Tables can be linked with your underlying DBMS data dictionary with foreign key constraints to ensure full consistency of the model (you still can use the client without that, though). Such constraints are not represented here for simplification purposes.
 
 ## Setting up Higiia - The Mammogram example
 
-**Higiia v2.0 is a domainless tool** for any medical image domain of CT, RX, or analogous study types. To illustrate the application capabilities, let's set up Higiia as a Content-Based Medical Image Retrieval tool for mammograms[^bignote]. 
+**Higiia v2.0 is a domainless tool** for any medical image domain of CT, RX, or analogous study types. To illustrate the application capabilities, let's set up Higiia as a Content-Based Medical Image Retrieval tool for mammograms[^note]. 
 
 ## Loading a dataset
 
-In this example, we will configure Higiia to query an [excerpt (05 images)](www) of a [public dataset][mammoset], which can be straighforwardly translated into a relational representation as follows.
+In this example, we will configure Higiia to query an [excerpt (05 images)][mammo] of a [public dataset][mammoset], which can be straighforwardly translated into a relational representation as follows.
 
 ![Mammogram table](example/imgs/MammogramTable.png)
 
@@ -45,7 +45,7 @@ CREATE TABLE Mammogram (
 );
 ```
 
-While the syntax is standard SQL for most the constraint `METRIC` defines the distance functions associated with the `PARTICULATE` (3-dimensional) `PcaF` attribute: `L1, L2, CANBERRA`. Those metrics must be previously created by the [Higiia instantiation script](www).
+While the syntax is standard SQL for most the constraint `METRIC` defines the distance functions associated with the `PARTICULATE` (3-dimensional) `PcaF` attribute: `L1, L2, CANBERRA`. Those metrics must be previously created by the [Higiia instantiation script][higiiaddl].
 
 Attributes {`biRads`, `density`, `subtlety`} are optional values that we can set Higiia to target (labeling, etc.). For instance, `biRads` is a consolidated [ACR-NEMA descriptor][birads] for mammograms that scales from `0` to `6`. Therefore, we can set Higiia to keep `biRads` as a **search scope** for the `Mammogram` table with a SQL insert into the Higiia internal table.
 
@@ -71,7 +71,7 @@ INSERT INTO Caption VALUES ('Mammogram', 'biRads', '6', 'Malignancy - biopsy-pro
 
 After the table creation and scope definition, we can insert dataset elements with extended SQL commands. You can compute the multidimensional features for each dataset entry outside Higiia (by using your favorite programing language and framework) and then wrap it up with an insertion script.
 
-Assuming the `PcaF` features have already been extracted in our example, the insertion of the [dataset excerpt](www) is carried out by the following extended SQL commands:
+Assuming the `PcaF` features have already been extracted in our example, the insertion of the [dataset excerpt][mammo] is carried out by the following extended SQL commands:
 
 ```sql
 INSERT INTO Mammogram VALUES (19, 1, 'mammo/usf0019_LCC_L1_MS_B.jpg', 'Patient 1', {0.01, 0.02, 0.03}, 'left craniocaudal', 'Mass', 2, 2, 4);
@@ -105,7 +105,7 @@ CREATE TABLE U_Mammogram (
 );
 ```
 
-After the table creation, we can populate it with query images, such as [this query example](query_example_2.krl).
+After the table creation, we can populate it with query images, such as [this query example][oq].
 
 ```sql
 INSERT INTO U_Mammogram VALUES (1, 2, 'mammo/query_example_2.krl', 'Patient X', {0.57, 0.53, 0.47}, NULL, NULL);
@@ -127,14 +127,23 @@ Higiia is now ready to query the mammogram dataset.
 Upon entering into the system, Higiia loads the pool of query images so that the user can select one case and proceed. Next, the query parameters must be defined. Some important points to take note of:
 
 1. *Similarity Parameters*
+
 1.1 Search Type:
-1.1.1. `Similarity Search`: Executes a [classical *k*-Nearest Neighbor search](www).
-1.1.2. `Diversity Search`: Executes [diversified](www) *k*-Nearest Neighbor search with [BRID](www).
-1.1.3. `Bridged Similarity Search`: Executes a diversified *k*-Nearest Neighbor search by [grouping non-diversified elements][kundaha] with [BridGE](www).
+
+1.1.1. `Similarity Search`: Executes a [classical and indexed *k*-Nearest Neighbor search][hetland].
+
+1.1.2. `Diversity Search`: Executes a fast [diversified][drosou] *k*-Nearest Neighbor search with [BRID][jasbick].
+
+1.1.3. `Bridged Similarity Search`: Executes a diversified *k*-Nearest Neighbor search by [grouping non-diversified elements][kundaha] with [BridGE][santos].
+
 1.2 Similarity Attribute: Indicates the `PARTICULATE` attribute employed for the building of the search space.
+
 1.3 Distance function: Indicates the search metric
+
 1.4 Relevance Feedback: Indicates the name of the Relevance Feedback method employed for query refinements
+
 1.5 Neighbors: The number of retrieved elements
+
 1.6 Max group size: The maximum number of clustered elements (Diversity and Bridged queries-only)
 
 2. `Scope` attributes can be used for filtering the content-based retrieval query. They are listed within the search ''Hypothesis'' combo-box.
@@ -148,21 +157,35 @@ Upon entering into the system, Higiia loads the pool of query images so that the
 6. A Content-Based Medical Image Retrieval query returns the result set in a Picture Archiving and Communication System (PACS)-like Viewer with windowing, zooming, and navigation tools. Depending on the search type, the following features are available.
 
 7. `Similarity Search` and `Diversity Search` features
+
 7.1 Putting the mouse upon an image of the result set enables the visualization of the annotation related to that specific result.
+
 7.2 Double-clicking brings the image from the result set to the center of the window.
+
 7.3 At the center of the window, the user can employ a high-contrast windowing operation for better visualization.
+
 7.4 Left-click triggers the exclusion of an image in the result set that is not relevant.
+
 7.5 Right-click enables you to mark an image in the result set as relevant.
+
 7.6 After labeling relevant and non-relevant images, you may request Rocchio-based relevance feedback cycles to explore other similar images.
 
 8. `Bridged Similarity Search`
+
 8.1 The representative images from strong influence sets are displayed on the right.
+
 8.2 Right-click expands and collapses a strong influence set.
+
 8.3 The list of representatives enables a result exploration from a diversity perspective, whereas the influence sets are kept sorted by similarity. Therefore, you can easily shift the exploration perspective from diversity to similarity.
+
 8.4 If an image is labeled as relevant, it is permanently kept in the "My List of Relevant Images" until you explicitly remove it.
+
 8.5 Images of strong influence sets can be dismissed with left-clicks. The entire influence set is dismissed if you discard the representative.
+
 8.6 Images labeled as relevant are kept in the "My List of Relevant Images".
+
 8.7 Diversified relevance feedback cycles shift the positioning of the query element by using the size of strong influence sets as another weight in the Rocchio-based relevant feedback algorithm.
+
 8.8 For each relevance feedback cycle, the retrieved images in the result set can be compared to others previously included in the "My List of Relevant Images".
 
 
@@ -225,7 +248,7 @@ WHERE temp.PcaF NEAR {0.57, 0.53, 0.47}
 ORDER BY (temp.Id);
 ```
 
-Result sets with images *too* similar may lead to burdensome and repeated relevance feedback cycles. Thus a query criterion with a more [*exploratory* nature](www) may be preferred in those cases. Higiia provides the `Diversity Search` and `Bridged Similarity Search` alternatives for such scenarios. `Diversity Search` result sets retrieves up to *k* neighbors diversified among themselves. Those neighbors are also called [*influencers*](www) in the search space regarding the viewpoint of the query object.
+Result sets with images *too* similar may lead to burdensome and repeated relevance feedback cycles. Thus a query criterion with a more *exploratory nature* may be preferred in those cases. Higiia provides the `Diversity Search` and `Bridged Similarity Search` alternatives for such scenarios. `Diversity Search` result sets retrieves up to *k* neighbors diversified among themselves. Those neighbors are also called [*influencers*][brid] in the search space regarding the viewpoint of the query object.
 
 In the mammogram example, a search for up to *k = 5* diversified and nearest neighbors of the query element (*'mammo/query_example_2.krl'*)  returns a result with only *four* images as follows. Why is that? Because one neighbor is also similar to a result set entry that is closer to the query object. Therefore, this candidate was discarded from the result set. (**NOTE**: the dataset also has only five entries).
 
@@ -270,7 +293,7 @@ Another feature provided by Higiia is the Analytical interface. It is also based
 
 
 
-The query representations are provided as 2D plots in which *influencers* are depicted as points through a [PCA dimensionality reduction](www). *Influenced objects* are spirally placed around *influencers* based on the distances among them. Users can click on a cluster for checking the *influencer* thumbnail, the group statistics regarding inner distances, and the `Scope` attributes. From that visualization point, users can:
+The query representations are provided as 2D plots in which *influencers* are depicted as points through a [PCA dimensionality reduction][agg]. *Influenced objects* are spirally placed around *influencers* based on the distances among them. Users can click on a cluster for checking the *influencer* thumbnail, the group statistics regarding inner distances, and the `Scope` attributes. From that visualization point, users can:
 
 - Explore the search space regarding any particular `Scope` value by just selecting the attribute of interest,
 - Explore faster the search space for non-expected `Scope` values and a larger number of neighbors,
@@ -298,12 +321,21 @@ The **glossary** for Higiia Analytics are as follows:
 - If you find any bug, feel free to open an issue. 
 - *The code is provided 'as is' and without any type of warrant or whatsoever (including bug fixing) - See License*.
 
-[^bignote]: Higiia [earliest versions][kundaha] were designed specifically for mammograms.
+[^note]: Higiia [earliest versions][kundaha] were designed specifically for mammograms.
 
 [//]: # (These are reference links used in the body of this note and get stripped out when the markdown processor does its job. There is no need to format nicely because it shouldn't be seen. Thanks SO - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-syntax)
 
-   [siren]: <https://github.com/joemccann/dillinger>
+   [siren]: <github.com/marcosivni/siren>
+   [higiiaddl]: <github.com/marcosivni/higiia/blob/main/model/Higiia_DDL.sql>
+   [mammo]: <github.com/marcosivni/higiia/tree/main/model/example/data/mammo>
+   [oq]: <github.com/marcosivni/higiia/blob/main/model/example/data/mammo/query_example_2.krl>
+   [hetland]: <https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.216.5538&rep=rep1&type=pdf>
+   [drosou]: <https://www.cs.drexel.edu/~julia/documents/big.2016.0054.pdf>
+   [jasbick]: <https://link.springer.com/chapter/10.1007/978-3-030-60936-8_11>
+   [santos]: <https://ieeexplore.ieee.org/abstract/document/6881893>
    [kundaha]: <github.com/marcosivni/kundaha>
-   [mammoset]: <https://bitbucket.org/gbdi/mammoset/src/master/>
+   [brid]: <https://www.researchgate.net/profile/Lucio-Dutra-Santos/publication/262253340_Parameter-free_and_domain-independent_similarity_search_with_diversity/links/5ca4aea4299bf1b86d61d045/Parameter-free-and-domain-independent-similarity-search-with-diversity.pdf>
+   [agg]: <https://eprints.ukh.ac.id/id/eprint/186/1/2015_Book_DataMining.pdf>
+   [mammoset]: <bitbucket.org/gbdi/mammoset/src/master/>
    [birads]: <https://www.acr.org/Clinical-Resources/Reporting-and-Data-Systems/Bi-Rads>
    
