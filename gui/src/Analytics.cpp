@@ -132,7 +132,7 @@ void Analytics::state02(QByteArray message){
 
     scopeAtts.append("Image_Class");
     if (scope.size()){
-        for (int x = 0; x < scope.size()-1; x++){
+        for (int x = 0; x < scope.size(); x++){
             if (!scope.fetchByColumnId(x, 0).contains("Image_Class")){
                 ui->cbxTarget->addItem(scope.fetchByColumnId(x, 0));
                 scopeAtts.append(scope.fetchByColumnId(x, 0));

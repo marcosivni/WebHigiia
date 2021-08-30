@@ -919,7 +919,9 @@ void OberonViewer::on_btnZoomIn_clicked(){
     ui->gridLayout_3->update();
     ui->scrollArea->update();
 
-    showWindowing();
+    if (currentImage->type() == Image::DICOM || currentImage->type() == Image::KRL){
+        showWindowing();
+    }
 }
 
 
