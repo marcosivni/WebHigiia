@@ -61,7 +61,7 @@ Known limitations include:
 ## Installation
 
 Install the background technologies and download the source code of 3rd-party libraries.
-Then, adjust the include paths of `higiia.pro` file to point to the installation folders of the 3rd-party libraries.
+Then, adjust the include paths of `higiia.pro.example` file to point to the installation folders of the 3rd-party libraries and rename it to `higiia.pro`.
 After that, you can use `build.sh` to compile the client version.
 Notice, you can configure the building type of Higiia in the `build.sh` file itself by selecting the `qmake` binary of your QT setup (e.g., wasm\_32 (default) or gcc\_64).
 
@@ -79,7 +79,8 @@ cd higiia
 ./build.sh && make clean
 ```
 
-Higiia v2.0 binaries require Qt DLLs to run on Windows machines. The web version of Higiia requires the browser to support .wasm files loaded through .js. 
+The web version of Higiia requires the browser to support .wasm files loaded through .js.
+Free binaries are available at the `/frontend` directory
 
 ## Directory structure
 
@@ -87,25 +88,25 @@ The directory tree is structured as follows.
 
 | Dir | Description |
 | ------ | ------ |
-| root  | Main functionalities and util |
-| icons | Contains the .png icons of the application |
-| controller | Contains the controller classes for the application |
-| GUI | Contains the form and source code of the application |
-| frontend | Contains a pre-compiled .wasm version of Higiia  |
-| 3rd-party  | Includes the entry points for 3rd-party libraries |
+| root  | Main functionalities and util. |
+| icons | Contains the .png icons of the application. |
+| controller | Contains the controller classes for the application. |
+| GUI | Contains the form and source code of the application. |
+| frontend | Contains a pre-compiled .wasm version of Higiia.  |
+| 3rd-party  | Includes the entry points for 3rd-party libraries. |
 
 
 **WARNING: Higiia is NOT clinical software. It is built for education and demonstration purposes ONLY!**
 
 [//]: # (These are reference links used in the body of this note and get stripped out when the markdown processor does its job. There is no need to format it nicely because it shouldn't be seen. Thanks SO - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-syntax)
 
-   [siren]: <github.com/marcosivni/siren2.0>
+   [siren]: <https://github.com/marcosivni/siren>
    [qt]: <https://www.qt.io/download>
-   [ws]: <github.com/marcosivni/siren_web_socket>
+   [ws]: <https://github.com/marcosivni/siren_web_socket>
    [ems]: <https://emscripten.org/docs/introducing_emscripten/index.html>
-   [hermes]: <github.com/marcosivni/hermes>
-   [artemis]: <github.com/marcosivni/artemis>
-   [dicomlib]: <github.com/marcosivni/dicomlib>
+   [hermes]: <https://github.com/marcosivni/hermes>
+   [artemis]: <https://github.com/marcosivni/artemis>
+   [dicomlib]: <https://github.com/marcosivni/dicomlib>
    [boost]: <https://www.boost.org/>
    [eigen]: <https://eigen.tuxfamily.org/>
    [model]: <https://github.com/marcosivni/higiia/blob/main/model/Model.md>
