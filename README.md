@@ -3,6 +3,8 @@
 
 ## _A domainless Content-Based Medical Image Retrieval tool for CT and RX_
 
+**WARNING: Higiia is NOT clinical software. It is built for education and demonstration purposes ONLY!**
+
 Higiia is a Content-Based Medical Image Retrieval (CBMIR) tool designed for handling any domain of CT and RX images. This version was coded in C++ with Qt SDK (5.15.1 - LGPL-license) and it is fully compatible with Web Assembly (emscripten coupled to Qt 5.15.1 with em++ compiler v2.0.22).
 
 It supports JPEG, PNG, BMP, and (most important) KRL and DICOM medical images by using self-contained 3rd-party libraries (see below). The query mechanism is provided by a counter-part that supports an extended SQL language and can be configured as an external server (see [The Siren Project][siren]), while external client-server applications can be used for managing medical image storage (see [QWebSocket File Transfer Project][ws]. As a result, the Higiia v2.0 implementation follows a simplified Model–View–Controller software pattern, in which a set of pre-defined tables and classes are employed for accessing and querying medical image datasets.
@@ -96,7 +98,7 @@ The directory tree is structured as follows.
 | 3rd-party  | Includes the entry points for 3rd-party libraries. |
 
 
-**WARNING: Higiia is NOT clinical software. It is built for education and demonstration purposes ONLY!**
+
 
 [//]: # (These are reference links used in the body of this note and get stripped out when the markdown processor does its job. There is no need to format it nicely because it shouldn't be seen. Thanks SO - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-syntax)
 
