@@ -269,7 +269,7 @@ ORDER BY (Mammogram.Id);
 
 Another feature provided by Higiia is the Analytical interface. It is also based on the search image and uses a distance-based classifier and the search criteria to label `Scope` attributes, provides statistics and describes the search space. The next figure presents Higiia Analytics for a `Bridged Similarity Search` over the dataset example of mammogram for *k=5* neighbors and groups of *5* elements.
 
-
+![Analytics Search](example/imgs/Analytics.png)
 
 The query representations are provided as 2D plots in which *influencers* are depicted as points through a [PCA dimensionality reduction][agg]. *Influenced objects* are spirally placed around *influencers* based on the distances among them. Users can click on a cluster for checking the *influencer* thumbnail, the group statistics regarding inner distances, and the `Scope` attributes. From that visualization point, users can:
 
