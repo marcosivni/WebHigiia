@@ -2,34 +2,35 @@
 
 ## _A domainless Content-Based Medical Image Retrieval tool for CT and RX_
 
-**WARNING: Higiia is NOT clinical software. It is built for education and demonstration purposes ONLY!**
+**WARNING: Higiia is NOT clinical software. It was designed for education and demonstration purposes ONLY!**
 
-Higiia is a Content-Based Medical Image Retrieval (CBMIR) tool designed for querying CT and RX images. This version was coded in C++ with Qt SDK (5.15.1 - LGPL-license) and it is compatible with Web Assembly (emscripten coupled to Qt 5.15.1 with em++ compiler v2.0.22).
+Higiia is a Content-Based Medical Image Retrieval (CBMIR) tool designed for querying CT and RX images. This version was coded in C++ with Qt SDK (5.15.1 - LGPL-license), and it is compatible with Web Assembly (emscripten coupled to Qt 5.15.1 with em++ compiler v2.0.22).
 
-It supports JPEG, PNG, BMP, KRL and DICOM medical images by using self-contained 3rd-party libraries (see below). The search mechanism is provided by a server counterpart that supports extended SQL queries (see [The Siren Project][siren]), and an external file server application is used for managing medical image storage (see [QWebSocket File Transfer Project][ws]. As a result, the implementation of Higiia v2.0 follows a simplified Model–View–Controller software pattern, in which a set of pre-defined tables and classes are employed for accessing and querying medical image datasets stored in external servers.
+It supports JPEG, PNG, BMP, KRL, and DICOM medical images through self-contained 3rd-party libraries. The search mechanism is provided by a server counterpart that supports extended SQL queries (see [The Siren Project][siren]). Additionally, an external file server application is used for managing medical image storage (see [QWebSocket File Transfer Project][ws]. 
+The implementation of Higiia v2.0 follows a simplified Model–View–Controller software pattern, where a set of pre-defined tables and classes are employed for accessing and querying medical image datasets stored in external servers.
 
-To set up your first CBMIR application supported by Higiia v2.0, the following steps are required:
+The following steps are required to set your first Higiia CBMIR application up:
 
-1. Configure the Siren Server and run the DDL creation of its internal tables.
-> The Siren server can be downloaded from [its GitHub entry][siren] and compiled with Qt 5.15.1 basic modules (+ network and SQL). Please note Siren is **neither** compatible with em++ (Web Assembly) **nor** loaded with its internal tables by default. Please, mind running the Siren DDL (creation) script after installation.
+1. Configure a SIREN Server and run the DDL creation of its internal tables.
+> The SIREN server can be downloaded from [its GitHub entry][siren] and compiled with Qt 5.15.1 basic modules (+ network and SQL). Please note SIREN is **neither** compatible with em++ (Web Assembly) **nor** loaded with its internal tables by default. Please, mind running the Siren DDL (creation) script after installation.
 
 2. Run the [Higiia DDL script][higiiaddl] on the server-side.
-> You can use a simple telnet connection (i.e., telnet <siren-server-ip> <siren-server-port>) to submit the DDL script that contains standard SQL commands for the creation of the Higiia v2.0 Model tables.
+> You can use a simple telnet connection (*i.e.*, `telnet <siren-server-ip> <siren-server-port>`) to submit the DDL script that contains standard SQL commands for the creation of the Higiia model tables.
 
 3. Structure your medical image dataset as an *Higiia table*. Then, create it on the server-side.
-> Please, refer to the [Higiia Modelling Guide][model] to structure your medical dataset as an Higiia table. The modeling process will generate a table where queries are placed.
+> Please, refer to the [Higiia Modelling Guide][model] to structure your medical dataset as an Higiia table. The modeling process will also generate a table in which queries shall be placed.
 
-4. Load your **data** in the new dataset table, and the **queries** (potentially undiagnosed cases) in the modeled queries' table.
+4. Load your **data** in the new dataset table and the **queries** (potentially undiagnosed cases) in the query table.
 > Data are inserted with simple extended INSERT INTO commands. See the [example for mammograms][model]. Notice, feature extraction can be carried out manually or with the support of your favorite programming language and framework, e.g., sklearn, pandas, etc.
 
-5. Run Higiia
+5. Run Higiia.
 > You can either straightforwardly run the higiia.html file alongside .wasm and .js loaders or compile the source code with Qt to generate a binary version of Higiia. 
 
 6. ✨Query (undiagnosed) images by content✨
 
 ## A handful of new features
 
-- Run either desktop or web version of Higiia v2.0 alike
+- Run either the desktop or the web version of Higiia alike
 - Support for DICOM images
 - Query images by content with either similarity or diversified similarity criteria
 - Support for zooming and windowing operations
@@ -40,7 +41,7 @@ To set up your first CBMIR application supported by Higiia v2.0, the following s
 
 ## Background technologies and 3rd-party libraries
 
-Higiia client tool relies on a series of background technologies and 3rd-party libraries, namely:
+The Higiia client tool relies on a series of background technologies and 3rd-party libraries, namely:
 
 1. Background technologies 
     - [Qt SDK][qt] - Qt Cross-Platform and SDK C++ development environment.
@@ -81,7 +82,7 @@ cd higiia
 ```
 
 The web version of Higiia requires the browser to support .wasm files loaded through .js (Chrome and Firefox currently support WebAssembly).
-Binaries are available at the `/frontend` directory
+Binaries are available at the `/frontend` directory.
 
 ## Directory structure
 
@@ -98,7 +99,13 @@ The directory tree is structured as follows.
 | 3rd-party  | Includes the entry points for 3rd-party libraries. |
 
 
+## Example
 
+See an Higiia-based application demo [here][model].
+
+## Notes
+
+_(C) THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS OF THIS SOFTWARE OR ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE._
 
 [//]: # (These are reference links used in the body of this note and get stripped out when the markdown processor does its job. There is no need to format it nicely because it shouldn't be seen. Thanks SO - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-syntax)
 
