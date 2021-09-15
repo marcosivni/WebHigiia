@@ -3,6 +3,7 @@
 *~
 WASM_Higiia.pro
 transfer.bat
+*.svg
 
 # C++ objects and libs
 *.slo
