@@ -88,7 +88,7 @@ INSERT INTO Mammogram (Id,  IdStudy,  Filename, Patient_Name, PcaF, Image_Type, 
                       VALUES (7, 1, 'mammo/usf0007_RCC_L1_MS_M.jpg', 'Patient 5', {0.55, 0.49, 0.37}, 'right craniocauda', 'Mass', 6, 2, 5);
 ```
 
-> **NOTE:** Remember copying the image files to the `fs` directory of the [Websocketfy-Server](https://github.com/marcosivni/websocketfy#generating-the-binary). In this example, the resulting directory tree is (Websocketfy-Server entry)/fs/mammo, where the images must be copied.
+> **NOTE:** Remember copying the image files to the `fs` directory of the [Websocketfy-Server](https://github.com/marcosivni/websocketfy#generating-the-binary). In this example, the resulting directory tree is (Websocketfy-Server entry)/fs/mammo, where the images must be pasted.
 
 > After the insertion of dataset elements, Higiia can query images by content (following the multidimensional features and the user-defined metrics). Nevertheless, we must assign the query images (potentially undiagnosed entries) to the users that can access them.
 
