@@ -6,7 +6,7 @@
 *
 * @param parent The parent widget. The default value is NULL.
 */
-UnreportedStudies::UnreportedStudies(QWebSocket *webSocket, int userId, QWidget *parent) :
+UnreportedStudies::UnreportedStudies(QWebSocket *webSocket, int userId, bool provenance, QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::UnreportedStudies){
 
@@ -36,6 +36,7 @@ UnreportedStudies::UnreportedStudies(QWebSocket *webSocket, int userId, QWidget 
 
     //Keep websocket connection
     this->webSocket = webSocket;
+    this->provenance = provenance;
     ui->txtSearchPatient->setFocus();
 
     //Load studies data
@@ -227,7 +228,20 @@ void UnreportedStudies::on_btnViewStudy_clicked(){
         try{
             QTableWidgetItem *item = ui->tblInfo->item(pos, 0);
             QStringList parameters = item->toolTip().split(",");
-            QueryParameters *qp = new QueryParameters(parameters.at(0).toInt(), parameters.at(1).simplified(), parameters.at(2).simplified(), webSocket, nullptr);
+            QueryParameters *qp = nullptr;
+            if (provenance){
+                qp = new QueryParameters(parameters.at(0).toInt(),
+                                         parameters.at(1).simplified(),
+                                         parameters.at(2).simplified(),
+                                         webSocket,
+                                         userId.toInt(),
+                                         nullptr);
+            } else {
+                qp = new QueryParameters(parameters.at(0).toInt(),
+                                         parameters.at(1).simplified(),
+                                         parameters.at(2).simplified(),
+                                         webSocket);
+            }
             qp->show();
         } catch(...) {
             ui->lblServerSetup->setText("Error: Invalid patient selection.");

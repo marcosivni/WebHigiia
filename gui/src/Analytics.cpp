@@ -9,7 +9,7 @@ Analytics::Analytics(QString tableName,
                      MedicalImageTable rSet,
                      bool vTable,
                      QString vTableName,
-                     QWebSocket *webSocket,
+                     QWebSocket *webSocket, int32_t oqId, int32_t userId,
                      QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::Analytics){
@@ -48,6 +48,8 @@ Analytics::Analytics(QString tableName,
     this->metricName = metricName;
     this->vTable = vTable;
     this->vTableName = vTableName;
+    this->oqId = oqId;
+    this->userId = userId;
 
     seriesByTarget = nullptr;
     chart = nullptr;
@@ -998,7 +1000,7 @@ void Analytics::on_btnUpdate_clicked(){
                     mappedValues.second = QPointF(dataset2D[z][0], dataset2D[z][1]);
                     mapPointToRowId.push_back(mappedValues);
 
-                    //Draw n spiral according to the number of influenced elements...
+                    //Draw an spiral according to the number of influenced elements...
                     spiralValues.clear();
                     spiralValues = spiral((uint16_t) mapInfluencedRows.values(y).size());
 
@@ -1093,23 +1095,40 @@ void Analytics::on_btnSearchOi_clicked(){
         scopeAttributes += scopeAtts[x];
     }
 
+    bufferViewer = nullptr;
     if (newRSet.size() > 0){
-        OberonViewer *oberonViewer = new OberonViewer(false,
-                                                      scopeAttributes,
-                                                      tableName,
-                                                      oqFileName,
-                                                      simAttribute,
-                                                      oq,
-                                                      newRSet,
-                                                      Util::SIMILARITY_SEARCH,
-                                                      newRSet.size() - 1,
-                                                      1,
-                                                      tableName,
-                                                      metricName,
-                                                      webSocket,
-                                                      nullptr);
-        oberonViewer->showFullScreen();
+        bufferViewer = new OberonViewer(false,
+                                        scopeAttributes,
+                                        tableName,
+                                        oqFileName,
+                                        simAttribute,
+                                        oq,
+                                        newRSet,
+                                        Util::SIMILARITY_SEARCH,
+                                        newRSet.size() - 1,
+                                        1,
+                                        tableName,
+                                        metricName,
+                                        webSocket,
+                                        oqId,
+                                        userId,
+                                        nullptr);
     }
+
+    if (userId != -1){
+        ui->lblStatus->setText("Saving provenance, please wait... ");
+        connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state08);
+        webSocket->sendBinaryMessage(Util::buildProvenanceInsert(userId, oqId, tableName, "bridge expansion", newRSet.toString(), QString::number(newRSet.size())).toStdString().c_str());
+    } else {
+        state08(QByteArray());
+    }
+}
+
+void Analytics::state08(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state08);
+    ui->lblStatus->setText("CBIR is ready!");
+    bufferViewer->showFullScreen();
 }
 
 
@@ -1176,9 +1195,22 @@ void Analytics::on_btnSearchOq_clicked(){
     //Order by
     queryT.addOrderByAttribute(tblName + ".Id");
 
+    if (userId != -1){
+        ui->lblStatus->setText("Saving provenance, please wait ...");
+        bufferQuery = queryT.generateQuery();        ;
+        connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state09);
+        webSocket->sendBinaryMessage(Util::buildProvenanceInsert(userId, oqId, tableName, "search after analytics", bufferQuery, "NONE").toStdString().c_str());
+    } else {
+        state09(QByteArray());
+    }
+}
+
+void Analytics::state09(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state09);
     ui->lblStatus->setText("Searching, please wait ...");
     connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state07);
-    webSocket->sendBinaryMessage(queryT.generateQuery().toStdString().c_str());
+    webSocket->sendBinaryMessage(bufferQuery.toStdString().c_str());
 }
 
 void Analytics::state07(QByteArray message){
@@ -1201,22 +1233,25 @@ void Analytics::state07(QByteArray message){
         scopeAttributes += tblName + "." + scopeAtts.at(x);
     }
 
+    bufferViewer = nullptr;
     if (trSet.size()){
-        OberonViewer *oberonViewer = new OberonViewer(vTable,
-                                                      scopeAttributes,
-                                                      tableName,
-                                                      oqFileName,
-                                                      simAttribute,
-                                                      oq,
-                                                      trSet,
-                                                      searchType,
-                                                      ui->txtNumberNeighbors->text().toUInt(),
-                                                      ui->txtNumberDiversity->text().toUInt(),
-                                                      vTableName,
-                                                      metricName,
-                                                      webSocket,
-                                                      nullptr);
-        oberonViewer->showFullScreen();
+        bufferViewer = new OberonViewer(vTable,
+                                        scopeAttributes,
+                                        tableName,
+                                        oqFileName,
+                                        simAttribute,
+                                        oq,
+                                        trSet,
+                                        searchType,
+                                        ui->txtNumberNeighbors->text().toUInt(),
+                                        ui->txtNumberDiversity->text().toUInt(),
+                                        vTableName,
+                                        metricName,
+                                        webSocket,
+                                        oqId,
+                                        userId,
+                                        nullptr);
+        bufferViewer->showFullScreen();
     } else {
         ui->lblStatus->setText("Empty result set!");
     }
@@ -1224,5 +1259,18 @@ void Analytics::state07(QByteArray message){
     //Unlocking widgets...
     ui->centralwidget->setEnabled(true);
     ui->lblStatus->setText("CBIR is ready!");
+}
+
+
+void Analytics::on_btnNewDiagnosis_clicked(){
+
+    if (userId != -1){
+        Image *currentImage = Util::openImage(oqFileName);
+        FormDiagnosis *diagnosis = new FormDiagnosis(*currentImage, oqId, tableName, webSocket, userId);
+        delete (currentImage);
+        diagnosis->showFullScreen();
+    } else {
+        ui->lblStatus->setText("Reports are not allowed in this mode (provenance-disabled)!");
+    }
 }
 

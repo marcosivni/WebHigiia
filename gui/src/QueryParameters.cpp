@@ -8,7 +8,7 @@
 * @param study The study data
 * @param parent The parent widget
 */
-QueryParameters::QueryParameters(uint16_t studyId, QString tableName, QString imageFile, QWebSocket *webSocket, QWidget *parent) :
+QueryParameters::QueryParameters(int32_t studyId, QString tableName, QString imageFile, QWebSocket *webSocket, int32_t userId, QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::QueryParameters){
 
@@ -40,6 +40,7 @@ QueryParameters::QueryParameters(uint16_t studyId, QString tableName, QString im
     this->filename = imageFile;
     this->tableName = tableName;
     this->studyId = studyId;
+    this->userId = userId;
 
     //Locking widgets...
     ui->cbxHypothesis->setEnabled(false);
@@ -331,13 +332,34 @@ void QueryParameters::state05(QByteArray message){
 
     ui->lblServerSetup->setText("Searching, please wait ...");
     connect(webSocket, &QWebSocket::binaryMessageReceived, this, &QueryParameters::state06);
+    provQuery = queryT.generateQuery();
     webSocket->sendBinaryMessage(queryT.generateQuery().toStdString().c_str());
 }
+
 
 void QueryParameters::state06(QByteArray message){
 
     disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &QueryParameters::state06);
     ui->lblServerSetup->setText("Connected to the Server!");
+    bufferRSet = message;
+
+    if (userId != -1){
+        ui->lblServerSetup->setText("Saving provenance, please wait ...");
+        connect(webSocket, &QWebSocket::binaryMessageReceived, this, &QueryParameters::state09);
+        webSocket->sendBinaryMessage(Util::buildProvenanceInsert(userId, studyId, tableName.split("_").last(), "search", QString(message), provQuery).toStdString().c_str());
+    } else {
+        state10(bufferRSet);
+    }
+}
+
+void QueryParameters::state09(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &QueryParameters::state09);
+    ui->lblServerSetup->setText("Connected to the Server!");
+    state10(bufferRSet);
+}
+
+void QueryParameters::state10(QByteArray message){
 
     MedicalImageTable rSet(Util::toStringList(message.split('\n')));
 
@@ -355,6 +377,8 @@ void QueryParameters::state06(QByteArray message){
                                                       vTableName,
                                                       ui->cbxDf->currentText(),
                                                       webSocket,
+                                                      studyId,
+                                                      userId,
                                                       nullptr);
         oberonViewer->showFullScreen();
     } else {
@@ -498,6 +522,7 @@ void QueryParameters::state07(QByteArray message){
 
     ui->lblServerSetup->setText("Searching, please wait ...");
     connect(webSocket, &QWebSocket::binaryMessageReceived, this, &QueryParameters::state08);
+    provQuery = queryT.generateQuery();
     webSocket->sendBinaryMessage(queryT.generateQuery().toStdString().c_str());
 }
 
@@ -505,6 +530,27 @@ void QueryParameters::state08(QByteArray message){
 
     disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &QueryParameters::state08);
     ui->lblServerSetup->setText("Connected to the Server!");
+    bufferRSet = message;
+
+    if (userId != -1){
+        ui->lblServerSetup->setText("Saving provenance, please wait...");
+        connect(webSocket, &QWebSocket::binaryMessageReceived, this, &QueryParameters::state11);
+        webSocket->sendBinaryMessage(Util::buildProvenanceInsert(userId, studyId, tableName.split("_").last(), "analytics", QString(message), provQuery).toStdString().c_str());
+    } else {
+        state12(bufferRSet);
+    }
+
+
+}
+
+void QueryParameters::state11(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &QueryParameters::state11);
+    ui->lblServerSetup->setText("Connected to the Server!");
+    state12(bufferRSet);
+}
+
+void QueryParameters::state12(QByteArray message){
 
     MedicalImageTable rSet(Util::toStringList(message.split('\n')));
 
@@ -517,7 +563,10 @@ void QueryParameters::state08(QByteArray message){
                                                    rSet,
                                                    ui->cbxHypothesis->currentIndex(),
                                                    vTableName,
-                                                   webSocket);
+                                                   webSocket,
+                                                   studyId,
+                                                   userId,
+                                                   nullptr);
         analyticsViewer->showFullScreen();
     } else {
         ui->lblServerSetup->setText("Empty result set!");

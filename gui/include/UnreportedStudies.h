@@ -25,6 +25,9 @@ class UnreportedStudies : public QMainWindow{ Q_OBJECT
         QWebSocket *webSocket;
         QStringList records;
         QString userId;
+        bool provenance;
+
+
     private:
         void loadStudyTable(int userId);
         void populateStudyTable(MedicalImageTable records);
@@ -47,7 +50,7 @@ class UnreportedStudies : public QMainWindow{ Q_OBJECT
         void changeEvent(QEvent *e);
 
     public:
-        explicit UnreportedStudies(QWebSocket *webSocket, int userId, QWidget *parent = 0);
+        explicit UnreportedStudies(QWebSocket *webSocket, int userId, bool provenance = false, QWidget *parent = 0);
         ~UnreportedStudies();
 };
 

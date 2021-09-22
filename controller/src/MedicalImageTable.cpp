@@ -82,5 +82,18 @@ void MedicalImageTable::print(){
     }
 }
 
+QString MedicalImageTable::toString(){
+
+    QString answer;
+
+    for (int x = 0; x < fetchCaption().size(); x++){
+        answer.append(fetchCaption(x) + " ");
+    }
+
+    for (int x = 0; x < size(); x++){
+        answer.append(fetchTupleByRowId(x) + "\n");
+    }
+}
+
 
 

@@ -27,7 +27,11 @@ class QueryParameters : public QMainWindow{ Q_OBJECT
         QWebSocket *webSocket;
         QString filename, tableName, vTableName, similarityAttribute, scopeAttributes;
         FeatureVector oq;
-        int studyId;
+        int32_t studyId;
+        int32_t userId;
+        //Store both query and result set before the insertion of provenance data
+        QByteArray bufferRSet;
+        QString provQuery;
 
     private:
         void loadScope();
@@ -42,12 +46,18 @@ class QueryParameters : public QMainWindow{ Q_OBJECT
         void state07(QByteArray message);
         void state08(QByteArray message);
 
+        void state09(QByteArray message);
+        void state10(QByteArray message);
+
+        void state11(QByteArray message);
+        void state12(QByteArray message);
+
         void on_btnClose_clicked();
         void on_btnViewStudy_clicked();
         void on_btnAnalytics_clicked();
 
     public:
-        explicit QueryParameters(uint16_t studyId, QString tableName, QString imageFile, QWebSocket *webSocket, QWidget *parent = 0);
+        explicit QueryParameters(int32_t studyId, QString tableName, QString imageFile, QWebSocket *webSocket, int32_t userId = -1, QWidget *parent = 0);
 		~QueryParameters();
 };
 

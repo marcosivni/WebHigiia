@@ -5,6 +5,7 @@
 #include <QImage>
 #include <QFileInfo>
 #include <QDir>
+#include <QDateTime>
 
 //Artemis includes
 #include <ImageBase.h>
@@ -38,6 +39,8 @@ class Util{
         static void saveImageAndThumbnailToFS(QString filename, QByteArray imgStream, QSize thumbSize);
         static void removeImage(QString filename);
         static void print(QStringList list);
+
+        static QString buildProvenanceInsert(uint32_t userId, uint32_t imageId, QString tableName, QString op, QString opValue, QString obs);
 };
 
 #endif // UTIL_H

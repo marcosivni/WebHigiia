@@ -29,6 +29,7 @@
 #include <MedicalImageTable.h>
 #include <SirenSqlQuery.h>
 #include <OberonViewer.h>
+#include <FormDiagnosis.h>
 
 //Eigen includes
 #include <Eigen/Sparse>
@@ -56,19 +57,25 @@ class Analytics : public QMainWindow {
         //Mapper rSet -> rInfSet
         QMultiMap<uint16_t, uint16_t> mapInfluencedRows;
 
+        //Chart
         QStringList targets;
         QChartView *chart;
         QScatterSeries **seriesByTarget;
         int nSeries;
 
+        //Chart points
         std::vector< std::pair<uint32_t, QPointF> > mapPointToRowId;
         QPointF currentClosest;
         FeatureVectorList dataset2D;
-
         QWebSocket *webSocket;
 
         //Scope caption
         ScopeCaption scopeCaption;
+
+        //Provenance info
+        int32_t oqId, userId;
+        OberonViewer *bufferViewer;
+        QString bufferQuery;
 
     private:
         std::vector<std::pair<double, double>> spiral(const uint16_t N, double *farthestInAxis = nullptr);
@@ -82,7 +89,7 @@ class Analytics : public QMainWindow {
         void fillNeighborImage(int rSetRowId);
         void populateData();
 
-
+        //State-machine for sync data loading
         void state01(QByteArray message);
         void state02(QByteArray message);
         void state03(QByteArray message);
@@ -90,6 +97,10 @@ class Analytics : public QMainWindow {
         void state05(QByteArray message);
         void state06(QByteArray message);
         void state07(QByteArray message);
+
+        //State-machine for provenance collection
+        void state08(QByteArray message);
+        void state09(QByteArray message);
 
         QString buildOqScope();
         QString buildOqStats();
@@ -111,6 +122,8 @@ class Analytics : public QMainWindow {
                            bool vTable,
                            QString vTableName,
                            QWebSocket *webSocket,
+                           int32_t oqId,
+                           int32_t userId,
                            QWidget *parent = nullptr);
         ~Analytics();
 
@@ -128,6 +141,7 @@ class Analytics : public QMainWindow {
         void on_btnSearchOi_clicked();
         void on_btnClose_clicked();
         void on_btnSearchOq_clicked();
+        void on_btnNewDiagnosis_clicked();
 };
 
 #endif // ANALYTICS_H

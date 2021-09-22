@@ -24,6 +24,7 @@ class MedicalImageTable : public ResultTable {
         FeatureVector featureVector(int rowId, QString simAttribute);
 
         void print();
+        QString toString();
 };
 
 #endif // MEDICALIMAGETABLE_H

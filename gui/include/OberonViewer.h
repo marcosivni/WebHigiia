@@ -25,6 +25,7 @@
 #include <WindowingInterval.h>
 #include <MedicalImageTable.h>
 #include <SirenSqlQuery.h>
+#include <FormDiagnosis.h>
 
 namespace Ui {
     class OberonViewer;
@@ -78,6 +79,10 @@ class OberonViewer : public QMainWindow { Q_OBJECT
         QWebSocket *webSocket;
         //UI
         Ui::OberonViewer *ui;
+        //Provenance info
+        int32_t oqId, userId;
+        QByteArray bufferRSet;
+        QString bufferQuery, obsProvenance;
 
     private:
         //Auxiliary methods for loading images into the file system
@@ -117,6 +122,8 @@ class OberonViewer : public QMainWindow { Q_OBJECT
         //State machine slots for relevance feedback cycles
         void state06(QByteArray message);
         void state07(QByteArray message);
+        void state08(QByteArray message);
+
 
         //Slots for user-interaction
         void unRelevantImageClickedRight();
@@ -139,10 +146,9 @@ class OberonViewer : public QMainWindow { Q_OBJECT
         void on_sliderCenter_sliderReleased();
         void on_sliderWidth_sliderReleased();
         void on_cbxWindowing_currentIndexChanged(int index);
+        void on_btnDiagnosis_clicked();
 
-        void printVariables();
-
-    public:
+                                      public:
         explicit OberonViewer(bool vTable,
                               QString scopeAttributes,
                               QString tableName,
@@ -156,6 +162,8 @@ class OberonViewer : public QMainWindow { Q_OBJECT
                               QString vTableName,
                               QString metricName,
                               QWebSocket *webSocket = nullptr,
+                              int32_t oqId = -1,
+                              int32_t userId = -1,
                               QWidget *parent = 0);
 		~OberonViewer();
 };

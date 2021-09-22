@@ -14,6 +14,8 @@ OberonViewer::OberonViewer(bool vTable,
                             QString vTableName,
                             QString metricName,
                             QWebSocket *webSocket,
+                            int32_t oqId,
+                            int32_t userId,
                             QWidget *parent)
     : QMainWindow(parent), ui(new Ui::OberonViewer){
 
@@ -31,6 +33,9 @@ OberonViewer::OberonViewer(bool vTable,
     this->scopeAttributes = scopeAttributes;
     this->vTableName = vTableName;
     this->metricName = metricName;
+    this->oqId = oqId;
+    this->userId = userId;
+
     ui->txtKnn->setText(QString::number(k));
     ui->txtBridge->setText(QString::number(kBridge));
 
@@ -373,36 +378,6 @@ void OberonViewer::state05(QByteArray message){
     ui->lblServerSetup->setText("CBIR is ready!");
 }
 
-void OberonViewer::printVariables(){
-
-    qDebug() << "rSet";
-    rSet.print();
-
-    qDebug() << "rInfSet";
-    rInfset.print();
-
-    qDebug() << "map inf rows";
-    QMapIterator<uint16_t, uint16_t> i(mapInfluencedRows);
-    while (i.hasNext()) {
-        i.next();
-        qDebug() << i.key() << ": " << i.value();
-    }
-
-    qDebug() << "map oid to names";
-    for (auto const& x : mapOidToNames){
-        qDebug() << x.first << ": " << x.second.c_str();
-    }
-
-    qDebug() << "myList";
-    for (auto const& x : myList){
-        qDebug() << x;
-    }
-
-    qDebug() << "removed list";
-    for (auto const& x : removedListOfIds){
-        qDebug() << x;
-    }
-}
 
 QString OberonViewer::toolTipBuilder(MedicalImageTable tempSet, int row){
 
@@ -1199,7 +1174,7 @@ void OberonViewer::on_btnFeedback_clicked(){
         tblName = tableName;
     }
 
-
+    obsProvenance.clear();
     if (!relevants.empty()){
         buildRelevants.addProjectionList( {"rf$PPV$" + tableName + "_"+ simAttribute + "."+ simAttribute, "'0' "});
         if (vTable){
@@ -1213,6 +1188,7 @@ void OberonViewer::on_btnFeedback_clicked(){
             if (x > 0){
                 condition += ", ";
             }
+            obsProvenance.append("r = " + QString::number(relevants[x]) + "\n");
             condition += QString::number(relevants[x]);
         }
         condition += ") ";
@@ -1237,6 +1213,7 @@ void OberonViewer::on_btnFeedback_clicked(){
             if (x > 0){
                 condition += ", ";
             }
+            obsProvenance.append("nr = " + QString::number(removedListOfIds[x]) + "\n");
             condition += QString::number(removedListOfIds[x]);
         }
         condition += ")";
@@ -1259,6 +1236,7 @@ void OberonViewer::state06(QByteArray message){
     float sumRelevants, sumNotRelevants, scaleFactor;
     QString queryObjectValue, condition, tblName;
     SirenSQLQuery queryT;
+
 
     if (!tempSet.size()){
         //Unlock screen
@@ -1346,13 +1324,24 @@ void OberonViewer::state06(QByteArray message){
     queryT.addWhereAttribute(condition);
     queryT.addOrderByAttribute(tblName + ".Id");
 
+
+
+    bufferQuery = queryT.generateQuery();
     connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state07);
-    webSocket->sendBinaryMessage(queryT.generateQuery().toStdString().c_str());
+    webSocket->sendBinaryMessage(Util::buildProvenanceInsert(userId, oqId, tableName, "relevance feedback", bufferQuery, obsProvenance).toStdString().c_str());
 }
 
 void OberonViewer::state07(QByteArray message){
 
     disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state07);
+
+    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state08);
+    webSocket->sendBinaryMessage(bufferQuery.toStdString().c_str());
+}
+
+void OberonViewer::state08(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state08);
 
     //Clear current variables, including result sets ...
     ui->lblServerSetup->setText("Rebuilding, please wait ...");
@@ -1389,5 +1378,16 @@ void OberonViewer::on_cbxWindowing_currentIndexChanged(int index){
 
     adjustSliders();
     showWindowing();
+}
+
+
+void OberonViewer::on_btnDiagnosis_clicked(){
+
+    if (userId != -1){
+        FormDiagnosis *diagnosis = new FormDiagnosis(*currentImage, oqId, tableName, webSocket, userId);
+        diagnosis->showFullScreen();
+    } else {
+        ui->lblServerSetup->setText("Reports are not allowed in this mode (provenance-disabled)!");
+    }
 }
 

@@ -96,174 +96,6 @@ QFrame{
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_4">
-    <item row="0" column="0" rowspan="4">
-     <widget class="QFrame" name="frame_2">
-      <property name="frameShape">
-       <enum>QFrame::StyledPanel</enum>
-      </property>
-      <property name="frameShadow">
-       <enum>QFrame::Raised</enum>
-      </property>
-      <layout class="QVBoxLayout" name="verticalLayout_3">
-       <item>
-        <widget class="QFrame" name="panelMining">
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_2">
-          <item>
-           <widget class="QLabel" name="lblCaptionVisualMiningTarget">
-            <property name="text">
-             <string>Visual Mining Target:</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QComboBox" name="cbxTarget">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">QWidget {
-	color: white;
-}
-
-QComboBox {
-    border: 1px solid gray;
-    border-radius: 3px;
-}
-
-QComboBox:editable {
-}
-
-QComboBox:!editable, QComboBox::drop-down:editable {
-}
-
-/* QComboBox gets the &quot;on&quot; state when the popup is open */
-QComboBox:!editable:on, QComboBox::drop-down:editable:on {
-}
-
-QComboBox:on { /* shift the text when the popup opens */
-
-}
-
-QComboBox::drop-down {
-}</string>
-            </property>
-            <item>
-             <property name="text">
-              <string>Image_Class</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="btnUpdate">
-            <property name="styleSheet">
-             <string notr="true">
- QPushButton {
-     border: 2px solid #8f8f91;
-     border-radius: 6px;
-     min-width: 80px;
-	color: white;
- }
-
- QPushButton:flat {
-     border: none; /* no border for a flat push button */
- }
-
- QPushButton:default {
-     border-color: navy; /* make the default button prominent */
- }
-</string>
-            </property>
-            <property name="text">
-             <string>Update</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <spacer name="horizontalSpacer">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QFrame" name="frame_3">
-         <property name="styleSheet">
-          <string notr="true">QFrame{
-	border: 2px;
-	border-color: white;
-}</string>
-         </property>
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_3">
-          <item row="0" column="0">
-           <widget class="QFrame" name="panelPlot">
-            <property name="minimumSize">
-             <size>
-              <width>720</width>
-              <height>720</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>999999</width>
-              <height>999999</height>
-             </size>
-            </property>
-            <property name="sizeIncrement">
-             <size>
-              <width>0</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="baseSize">
-             <size>
-              <width>0</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="frameShape">
-             <enum>QFrame::StyledPanel</enum>
-            </property>
-            <property name="frameShadow">
-             <enum>QFrame::Raised</enum>
-            </property>
-            <layout class="QGridLayout" name="gridLayout">
-             <item row="0" column="0">
-              <layout class="QGridLayout" name="lytChart"/>
-             </item>
-            </layout>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-    </item>
     <item row="0" column="1">
      <widget class="QGroupBox" name="gbxOq">
       <property name="minimumSize">
@@ -1148,150 +980,6 @@ QGroupBox::title {
       </layout>
      </widget>
     </item>
-    <item row="2" column="1">
-     <spacer name="verticalSpacer_5">
-      <property name="orientation">
-       <enum>Qt::Vertical</enum>
-      </property>
-      <property name="sizeHint" stdset="0">
-       <size>
-        <width>20</width>
-        <height>13</height>
-       </size>
-      </property>
-     </spacer>
-    </item>
-    <item row="3" column="1">
-     <widget class="QFrame" name="panelButtons">
-      <property name="frameShape">
-       <enum>QFrame::StyledPanel</enum>
-      </property>
-      <property name="frameShadow">
-       <enum>QFrame::Raised</enum>
-      </property>
-      <layout class="QHBoxLayout" name="horizontalLayout_3">
-       <item>
-        <spacer name="horizontalSpacer_8">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>40</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item>
-        <widget class="QPushButton" name="btnClose">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>93</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>93</width>
-           <height>93</height>
-          </size>
-         </property>
-         <property name="styleSheet">
-          <string notr="true"> QPushButton {
-     border: 2px solid #8f8f91;
-     border-radius: 6px;
-
-	color: black;
- }
-
- QPushButton:pressed {
-
- }
-
- QPushButton:flat {
-     border: none; /* no border for a flat push button */
- }
-
- QPushButton:default {
-     border-color: white; /* make the default button prominent */
- }
-
-QFrame{
-	border: none;
-}</string>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-         <property name="icon">
-          <iconset resource="../../icons.qrc">
-           <normaloff>:/icons/icoCloseReverseLine.png</normaloff>:/icons/icoCloseReverseLine.png</iconset>
-         </property>
-         <property name="iconSize">
-          <size>
-           <width>80</width>
-           <height>80</height>
-          </size>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="btnNewDiagnosis">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>93</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>93</width>
-           <height>93</height>
-          </size>
-         </property>
-         <property name="styleSheet">
-          <string notr="true"> QPushButton {
-     border: 2px solid #8f8f91;
-     border-radius: 6px;
-
-	color: black;
- }
-
- QPushButton:pressed {
-
- }
-
- QPushButton:flat {
-     border: none; /* no border for a flat push button */
- }
-
- QPushButton:default {
-     border-color: white; /* make the default button prominent */
- }
-
-QFrame{
-	border: none;
-}</string>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-         <property name="icon">
-          <iconset resource="../../icons.qrc">
-           <normaloff>:/icons/icoWriteNewDiagnosis.png</normaloff>:/icons/icoWriteNewDiagnosis.png</iconset>
-         </property>
-         <property name="iconSize">
-          <size>
-           <width>80</width>
-           <height>80</height>
-          </size>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-    </item>
     <item row="4" column="0" colspan="2">
      <widget class="QFrame" name="frameStatus">
       <property name="frameShape">
@@ -1343,6 +1031,376 @@ QFrame{
        </item>
       </layout>
      </widget>
+    </item>
+    <item row="3" column="1">
+     <widget class="QFrame" name="panelButtons">
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout_3">
+       <item>
+        <spacer name="horizontalSpacer_8">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnClose">
+         <property name="minimumSize">
+          <size>
+           <width>93</width>
+           <height>93</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>93</width>
+           <height>93</height>
+          </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true"> QPushButton {
+     border: 2px solid #8f8f91;
+     border-radius: 6px;
+
+	color: black;
+ }
+
+ QPushButton:pressed {
+
+ }
+
+ QPushButton:flat {
+     border: none; /* no border for a flat push button */
+ }
+
+ QPushButton:default {
+     border-color: white; /* make the default button prominent */
+ }
+
+QFrame{
+	border: none;
+}</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="../../icons.qrc">
+           <normaloff>:/icons/icoCloseReverseLine.png</normaloff>:/icons/icoCloseReverseLine.png</iconset>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>80</width>
+           <height>80</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnPACS">
+         <property name="minimumSize">
+          <size>
+           <width>93</width>
+           <height>93</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>93</width>
+           <height>93</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>-1</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">
+
+ QPushButton {
+     border: 2px solid #8f8f91;
+     border-radius: 6px;
+    font-size: 30px;
+	color: white;
+ }
+
+ QPushButton:pressed {
+
+ }
+
+ QPushButton:flat {
+     border: none; /* no border for a flat push button */
+ }
+
+ QPushButton:default {
+     border-color: white; /* make the default button prominent */
+ }
+
+QFrame{
+	border: none;
+}</string>
+         </property>
+         <property name="text">
+          <string>PACS</string>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>60</width>
+           <height>60</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnNewDiagnosis">
+         <property name="minimumSize">
+          <size>
+           <width>93</width>
+           <height>93</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>93</width>
+           <height>93</height>
+          </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true"> QPushButton {
+     border: 2px solid #8f8f91;
+     border-radius: 6px;
+
+	color: black;
+ }
+
+ QPushButton:pressed {
+
+ }
+
+ QPushButton:flat {
+     border: none; /* no border for a flat push button */
+ }
+
+ QPushButton:default {
+     border-color: white; /* make the default button prominent */
+ }
+
+QFrame{
+	border: none;
+}</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="../../icons.qrc">
+           <normaloff>:/icons/icoWriteNewDiagnosis.png</normaloff>:/icons/icoWriteNewDiagnosis.png</iconset>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>80</width>
+           <height>80</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="0" column="0" rowspan="4">
+     <widget class="QFrame" name="frame_2">
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QFrame" name="panelMining">
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QLabel" name="lblCaptionVisualMiningTarget">
+            <property name="text">
+             <string>Visual Mining Target:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="cbxTarget">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">QWidget {
+	color: white;
+}
+
+QComboBox {
+    border: 1px solid gray;
+    border-radius: 3px;
+}
+
+QComboBox:editable {
+}
+
+QComboBox:!editable, QComboBox::drop-down:editable {
+}
+
+/* QComboBox gets the &quot;on&quot; state when the popup is open */
+QComboBox:!editable:on, QComboBox::drop-down:editable:on {
+}
+
+QComboBox:on { /* shift the text when the popup opens */
+
+}
+
+QComboBox::drop-down {
+}</string>
+            </property>
+            <item>
+             <property name="text">
+              <string>Image_Class</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnUpdate">
+            <property name="styleSheet">
+             <string notr="true">
+ QPushButton {
+     border: 2px solid #8f8f91;
+     border-radius: 6px;
+     min-width: 80px;
+	color: white;
+ }
+
+ QPushButton:flat {
+     border: none; /* no border for a flat push button */
+ }
+
+ QPushButton:default {
+     border-color: navy; /* make the default button prominent */
+ }
+</string>
+            </property>
+            <property name="text">
+             <string>Update</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QFrame" name="frame_3">
+         <property name="styleSheet">
+          <string notr="true">QFrame{
+	border: 2px;
+	border-color: white;
+}</string>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_3">
+          <item row="0" column="0">
+           <widget class="QFrame" name="panelPlot">
+            <property name="minimumSize">
+             <size>
+              <width>720</width>
+              <height>720</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>999999</width>
+              <height>999999</height>
+             </size>
+            </property>
+            <property name="sizeIncrement">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="baseSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QGridLayout" name="gridLayout">
+             <item row="0" column="0">
+              <layout class="QGridLayout" name="lytChart"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="2" column="1">
+     <spacer name="verticalSpacer_5">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>13</height>
+       </size>
+      </property>
+     </spacer>
     </item>
    </layout>
   </widget>

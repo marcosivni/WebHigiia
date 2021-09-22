@@ -186,3 +186,19 @@ void Util::print(QStringList list){
     }
 }
 
+QString Util::buildProvenanceInsert(uint32_t userId, uint32_t imageId, QString tableName, QString op, QString opValue, QString obs){
+
+    QString insertStatement;
+
+    insertStatement =  "INSERT INTO H_Provenance (userId, imageId, tStamp, tableName, operation, opValue, observation";
+    insertStatement += ") VALUES ('" + QString::number(userId) + "'";
+    insertStatement += ", '" + QString::number(imageId) + "'";
+    insertStatement += ", '" + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + "'";
+    insertStatement += ", '" + QString("U_" + tableName) + "'";
+    insertStatement += ", '" + op + "'";
+    insertStatement += ", '" + opValue + "'";
+    insertStatement += ", '" + obs + "')";
+
+    return insertStatement;
+}
+

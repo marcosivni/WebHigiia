@@ -192,6 +192,41 @@ QGroupBox {
         </widget>
        </item>
        <item>
+        <widget class="QPushButton" name="btnPACS">
+         <property name="minimumSize">
+          <size>
+           <width>84</width>
+           <height>82</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>82</width>
+           <height>82</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>-1</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">font-size: 30px;</string>
+         </property>
+         <property name="text">
+          <string>PACS</string>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>60</width>
+           <height>60</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QPushButton" name="btnAnalytics">
          <property name="minimumSize">
           <size>
