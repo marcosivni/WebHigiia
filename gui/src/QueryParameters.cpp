@@ -43,20 +43,7 @@ QueryParameters::QueryParameters(int32_t studyId, QString tableName, QString ima
     this->userId = userId;
 
     //Locking widgets...
-    ui->cbxHypothesis->setEnabled(false);
-    ui->txtMinimum->setEnabled(false);
-    ui->txtMaximum->setEnabled(false);
-    ui->cbxSimilarityAttribute->setEnabled(false);
-    ui->cbxDf->setEnabled(false);
-    ui->cbxRF->setEnabled(false);
-    ui->txtNumberDiversity->setEnabled(false);
-    ui->txtNumberNeighbors->setEnabled(false);
-    ui->rbtDiversity->setEnabled(false);
-    ui->rbtSimilarity->setEnabled(false);
-    ui->rbtBridge->setEnabled(false);
-    ui->btnNewSearchParameter->setEnabled(false);
-    ui->btnViewStudy->setEnabled(false);
-
+    lockWidgets();
     ui->lblServerSetup->setText("Requesting, please wait ...");
 
 
@@ -79,13 +66,56 @@ QueryParameters::QueryParameters(int32_t studyId, QString tableName, QString ima
     }
 }
 
+void QueryParameters::lockWidgets(){
+
+    ui->cbxHypothesis->setEnabled(false);
+    ui->txtMinimum->setEnabled(false);
+    ui->txtMaximum->setEnabled(false);
+    ui->cbxSimilarityAttribute->setEnabled(false);
+    ui->cbxDf->setEnabled(false);
+    ui->cbxRF->setEnabled(false);
+    ui->txtNumberDiversity->setEnabled(false);
+    ui->txtNumberNeighbors->setEnabled(false);
+    ui->rbtDiversity->setEnabled(false);
+    ui->rbtSimilarity->setEnabled(false);
+    ui->rbtBridge->setEnabled(false);
+
+
+    ui->btnAnalytics->setEnabled(false);
+    ui->btnClose->setEnabled(false);
+    ui->btnNewSearchParameter->setEnabled(false);
+    ui->btnPACS->setEnabled(false);
+    ui->btnViewStudy->setEnabled(false);
+}
+
+void QueryParameters::unlockWidgets(){
+
+    ui->cbxHypothesis->setEnabled(true);
+    ui->txtMinimum->setEnabled(true);
+    ui->txtMaximum->setEnabled(true);
+    ui->cbxSimilarityAttribute->setEnabled(true);
+    ui->cbxDf->setEnabled(true);
+    ui->cbxRF->setEnabled(true);
+    ui->txtNumberDiversity->setEnabled(true);
+    ui->txtNumberNeighbors->setEnabled(true);
+    ui->rbtDiversity->setEnabled(true);
+    ui->rbtSimilarity->setEnabled(true);
+    ui->rbtBridge->setEnabled(true);
+
+    ui->btnAnalytics->setEnabled(true);
+    ui->btnClose->setEnabled(true);
+    ui->btnNewSearchParameter->setEnabled(true);
+    ui->btnPACS->setEnabled(true);
+    ui->btnViewStudy->setEnabled(true);
+}
+
 /**
 * Destructor.
 *
 */
 QueryParameters::~QueryParameters(){
 
-    Util::removeImage(filename);
+    Util::removeDirectoryAndContent();
     delete ui;
 }
 
@@ -141,14 +171,10 @@ void QueryParameters::state02(QByteArray message){
         ui->cbxHypothesis->addItem(scopeTable.fetchByColumnId(x, 0));
     }
 
-    ui->cbxHypothesis->setEnabled(true);
-    ui->txtMaximum->setEnabled(true);
-    ui->txtMinimum->setEnabled(true);
-
 
     ui->lblServerSetup->setText("Fetching attributes, please wait ...");
     SirenSQLQuery buildSimAtt;
-    buildSimAtt.addProjectionAttribute("ComplexAttribName");
+    buildSimAtt.addProjectionAttribute("DISTINCT ComplexAttribName");
     buildSimAtt.addTable("CDD$ComplexAttribMetric");
     buildSimAtt.addWhereAttribute("TableName = '" + tableName +"'");
 
@@ -191,26 +217,17 @@ void QueryParameters::state04(QByteArray message){
         ui->cbxDf->addItem(dfTable.fetchByColumnId(x, 0));
     }
 
-    //Unlocking screen for search
-    ui->cbxHypothesis->setEnabled(true);
-    ui->cbxDf->setEnabled(true);
-    ui->cbxRF->setEnabled(true);
-    ui->cbxSimilarityAttribute->setEnabled(true);
+    //@to-do Add other RF methods
     ui->cbxRF->addItem("Rocchio");
-    ui->btnViewStudy->setEnabled(true);
-    ui->rbtDiversity->setEnabled(true);
-    ui->rbtSimilarity->setEnabled(true);
-    ui->rbtBridge->setEnabled(true);
-    ui->txtNumberDiversity->setEnabled(true);
-    ui->txtNumberNeighbors->setEnabled(true);
 
-    ui->btnNewSearchParameter->setEnabled(true);
-    ui->btnViewStudy->setEnabled(true);
-
+    //Unlocking screen for interaction
+    unlockWidgets();
     ui->lblServerSetup->setText("Connected to the Server!");
 }
 
 void QueryParameters::on_btnViewStudy_clicked(){
+
+    unlockWidgets();
 
     similarityAttribute = ui->cbxSimilarityAttribute->currentText();
 
@@ -222,19 +239,7 @@ void QueryParameters::on_btnViewStudy_clicked(){
         ui->lblServerSetup->setText("Building the query, please wait...");
 
         //Locking widgets...
-        ui->cbxHypothesis->setEnabled(false);
-        ui->txtMinimum->setEnabled(false);
-        ui->txtMaximum->setEnabled(false);
-        ui->cbxSimilarityAttribute->setEnabled(false);
-        ui->cbxDf->setEnabled(false);
-        ui->cbxRF->setEnabled(false);
-        ui->txtNumberDiversity->setEnabled(false);
-        ui->txtNumberNeighbors->setEnabled(false);
-        ui->rbtDiversity->setEnabled(false);
-        ui->rbtSimilarity->setEnabled(false);
-        ui->rbtBridge->setEnabled(false);
-        ui->btnNewSearchParameter->setEnabled(false);
-        ui->btnViewStudy->setEnabled(false);
+        lockWidgets();
 
         //Montar objeto de consulta
         SirenSQLQuery buildFV;
@@ -388,20 +393,7 @@ void QueryParameters::state10(QByteArray message){
     scopeAttributes.clear();
     vTableName.clear();
 
-    //Unlocking widgets...
-    ui->cbxHypothesis->setEnabled(true);
-    ui->txtMinimum->setEnabled(true);
-    ui->txtMaximum->setEnabled(true);
-    ui->cbxSimilarityAttribute->setEnabled(true);
-    ui->cbxDf->setEnabled(true);
-    ui->cbxRF->setEnabled(true);
-    ui->txtNumberDiversity->setEnabled(true);
-    ui->txtNumberNeighbors->setEnabled(true);
-    ui->rbtDiversity->setEnabled(true);
-    ui->rbtSimilarity->setEnabled(true);
-    ui->rbtBridge->setEnabled(true);
-    ui->btnNewSearchParameter->setEnabled(true);
-    ui->btnViewStudy->setEnabled(true);
+    unlockWidgets();
 }
 
 void QueryParameters::on_btnClose_clicked(){
@@ -422,19 +414,7 @@ void QueryParameters::on_btnAnalytics_clicked(){
         ui->lblServerSetup->setText("Building the reference, please wait...");
 
         //Locking widgets...
-        ui->cbxHypothesis->setEnabled(false);
-        ui->txtMinimum->setEnabled(false);
-        ui->txtMaximum->setEnabled(false);
-        ui->cbxSimilarityAttribute->setEnabled(false);
-        ui->cbxDf->setEnabled(false);
-        ui->cbxRF->setEnabled(false);
-        ui->txtNumberDiversity->setEnabled(false);
-        ui->txtNumberNeighbors->setEnabled(false);
-        ui->rbtDiversity->setEnabled(false);
-        ui->rbtSimilarity->setEnabled(false);
-        ui->rbtBridge->setEnabled(false);
-        ui->btnNewSearchParameter->setEnabled(false);
-        ui->btnViewStudy->setEnabled(false);
+        lockWidgets();
 
         //Montar objeto de consulta
         SirenSQLQuery buildFV;
@@ -576,18 +556,6 @@ void QueryParameters::state12(QByteArray message){
     vTableName.clear();
 
     //Unlocking widgets...
-    ui->cbxHypothesis->setEnabled(true);
-    ui->txtMinimum->setEnabled(true);
-    ui->txtMaximum->setEnabled(true);
-    ui->cbxSimilarityAttribute->setEnabled(true);
-    ui->cbxDf->setEnabled(true);
-    ui->cbxRF->setEnabled(true);
-    ui->txtNumberDiversity->setEnabled(true);
-    ui->txtNumberNeighbors->setEnabled(true);
-    ui->rbtDiversity->setEnabled(true);
-    ui->rbtSimilarity->setEnabled(true);
-    ui->rbtBridge->setEnabled(true);
-    ui->btnNewSearchParameter->setEnabled(true);
-    ui->btnViewStudy->setEnabled(true);
+    unlockWidgets();
 }
 

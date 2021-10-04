@@ -46,7 +46,7 @@ QString ScopeCaption::generateSQLBaseQuery(const QString &tableName){
 
     QString answer;
 
-    answer = "SELECT attribute, valueN, caption FROM Caption WHERE tableN = '" + tableName + "'";
+    answer = "SELECT attributeN, valueN, caption FROM Caption WHERE tableN = '" + tableName + "'";
 
     return answer;
 }

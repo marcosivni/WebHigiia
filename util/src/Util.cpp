@@ -89,6 +89,8 @@ Image* Util::openThumbnail(QString filename){
 
 Image* Util::openImage(QString filename){
 
+    filename = WFS_NAME + filename;
+
     try{
         //It handles jpg, bmp, png, krl and dicom through Artemis external library
         if (filename.split(".").last().toUpper() == "KRL"){
@@ -127,47 +129,68 @@ Image* Util::openImage(QString filename){
 
 void Util::saveImageAndThumbnailToFS(QString filename, QByteArray imgStream){
 
-    QFileInfo info(filename);
+
+    QFileInfo info(WFS_NAME + filename);
     QDir dir(info.dir().path());
     if (!dir.exists()){
         dir.mkpath(".");
     }
 
     std::ofstream out;
-    out.open(filename.toStdString().c_str(),  std::ofstream::out);
+    out.open((WFS_NAME + filename).toStdString().c_str(),  std::ofstream::out);
     out << imgStream.toStdString();
     out.close();
 
     Image *img = Util::openImage(filename);
     QImage *qimg = Util::convertImageToQImage(img);
     *qimg = qimg->scaled(120,120);
-    qimg->save(filename + "_thumb.jpg");
+    qimg->save((WFS_NAME + filename) + "_thumb.jpg");
+
     delete (img);
     delete (qimg);
 }
 
 void Util::saveImageAndThumbnailToFS(QString filename, QByteArray imgStream, QSize thumbSize){
 
-    QFileInfo info(filename);
+    QFileInfo info(WFS_NAME + filename);
     QDir dir(info.dir().path());
     if (!dir.exists()){
         dir.mkpath(".");
     }
 
     std::ofstream out;
-    out.open(filename.toStdString().c_str(),  std::ofstream::out);
+    out.open((WFS_NAME + filename).toStdString().c_str(),  std::ofstream::out);
     out << imgStream.toStdString();
     out.close();
 
     Image *img = Util::openImage(filename);
     QImage *qimg = Util::convertImageToQImage(img);
     *qimg = qimg->scaled(thumbSize);
-    qimg->save(filename + "_thumb.jpg");
+    qimg->save((WFS_NAME + filename) + "_thumb.jpg");
+
     delete (img);
     delete (qimg);
 }
 
+void Util::removeDirectoryAndContent(QString dirPath){
+
+    QDir dir(dirPath);
+
+    if (dir.exists()) {
+        Q_FOREACH(QFileInfo info, dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden  | QDir::AllDirs | QDir::Files, QDir::DirsFirst)) {
+            if (info.isDir()) {
+                removeDirectoryAndContent(info.absoluteFilePath());
+            } else {
+                QFile::remove(info.absoluteFilePath());
+            }
+        }
+        QDir().rmdir(dirPath);
+    }
+}
+
 void Util::removeImage(QString filename){
+
+    filename = WFS_NAME + filename;
 
     remove(filename.toStdString().c_str());
     remove((filename + "_thumb.jpg").toStdString().c_str());

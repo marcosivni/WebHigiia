@@ -67,7 +67,7 @@ void FormDiagnosis::state01(QByteArray message){
 
     //Create QLabels for the query scope
     for (int x = 0; x < scopeTable.size(); x++){
-        ui->lytScrollArea->addWidget(new QLabel(scopeTable.fetchByColumnId(x, 0), this));
+        ui->lytScrollArea->addWidget(new QLabel("- ITEM: " + scopeTable.fetchByColumnId(x, 0), this));
         attributeList.append(scopeTable.fetchByColumnId(x, 0));
         ui->lytScrollArea->addWidget(new QPlainTextEdit("<Empty>", this));
     }

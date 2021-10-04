@@ -286,7 +286,7 @@ void UnreportedStudies::state01(QByteArray message){
                buildTable.clear();
                buildTable.addProjectionList({"p.*", "Id", "Patient_Name", "Filename", "p.tableName TableName"});
                buildTable.addTable(poolTables.fetchByColumnId(x, 0) + " u ");
-               buildTable.addJoinList({"Pool p"}, {"p.imageId = u.id"});
+               buildTable.addJoinList({"Pool p"}, {"p.imageId = u.Id"});
                buildTable.addWhereListAnd({"p.userId = '" + userId + "'", "p.tableName = '" + poolTables.fetchByColumnId(x, 0) + "'"});
 
                unionQuery += buildTable.generateQuery();

@@ -55,7 +55,7 @@ void OberonViewer::state01(QByteArray message){
     int posAtt, posValue, posCaption;
     ResultTable tuples(Util::toStringList(message.split('\n')));
 
-    posAtt= tuples.locateColumn("attribute");
+    posAtt= tuples.locateColumn("attributeN");
     posValue= tuples.locateColumn("valueN");
     posCaption= tuples.locateColumn("caption");
 
@@ -856,19 +856,6 @@ OberonViewer::~OberonViewer(){
         if (queryImage != nullptr){
             delete queryImage;
             queryImage = nullptr;
-        }
-    }
-
-    for (auto const& x : mapOidToNames){
-        remove(x.second.c_str());
-        remove((x.second + "_thumb.jpg").c_str());
-    }
-
-    for (auto const& x : mapOidToNames){
-        QFileInfo info(x.second.c_str());
-        QDir dir(info.dir().path());
-        if (dir.exists()){
-            dir.rmpath(".");
         }
     }
     mapOidToNames.clear();

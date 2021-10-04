@@ -65,13 +65,45 @@ Analytics::Analytics(QString tableName,
     webSocket->sendBinaryMessage(scopeCaption.generateSQLBaseQuery(tableName).toStdString().c_str());
 }
 
-Analytics::~Analytics(){
+void Analytics::lockWidgets(){
 
-    int posImg = rSet.locateImageFilename();
-    for (int x = 0; x < rSet.size(); x++){
-        Util::removeImage(rSet.fetchByColumnId(x, posImg));
-    }
-    Util::removeImage(oqFileName);
+    ui->btnClose->setEnabled(false);
+    ui->btnNewDiagnosis->setEnabled(false);
+    ui->btnOi->setEnabled(false);
+    ui->btnOq->setEnabled(false);
+    ui->btnPACS->setEnabled(false);
+    ui->btnScopeOi->setEnabled(false);
+    ui->btnScopeOq->setEnabled(false);
+    ui->btnSearchOi->setEnabled(false);
+    ui->btnStatsOq->setEnabled(false);
+    ui->btnStatsOi->setEnabled(false);
+    ui->btnStatsOq->setEnabled(false);
+    ui->btnUpdate->setEnabled(false);
+
+    ui->txtNumberDiversity->setEnabled(false);
+    ui->txtNumberNeighbors->setEnabled(false);
+}
+
+void Analytics::unlockWidgets(){
+
+    ui->btnClose->setEnabled(true);
+    ui->btnNewDiagnosis->setEnabled(true);
+    ui->btnOi->setEnabled(true);
+    ui->btnOq->setEnabled(true);
+    ui->btnPACS->setEnabled(true);
+    ui->btnScopeOi->setEnabled(true);
+    ui->btnScopeOq->setEnabled(true);
+    ui->btnSearchOi->setEnabled(true);
+    ui->btnStatsOq->setEnabled(true);
+    ui->btnStatsOi->setEnabled(true);
+    ui->btnStatsOq->setEnabled(true);
+    ui->btnUpdate->setEnabled(true);
+
+    ui->txtNumberDiversity->setEnabled(true);
+    ui->txtNumberNeighbors->setEnabled(true);
+}
+
+Analytics::~Analytics(){
 
     if (seriesByTarget != nullptr) {
         for (int i = 0; i < nSeries; i++) {
@@ -102,7 +134,7 @@ void Analytics::state01(QByteArray message){
     int posAtt, posValue, posCaption;
     ResultTable scopeV(Util::toStringList(message.split('\n')));
 
-    posAtt = scopeV.locateColumn("attribute");
+    posAtt = scopeV.locateColumn("attributeN");
     posValue= scopeV.locateColumn("valueN");
     posCaption= scopeV.locateColumn("caption");
 
@@ -355,7 +387,6 @@ void Analytics::downloadOq(){
 
     ui->lblStatus->setText("Downloading query image, please wait ...");
     QString request = "REQUEST " + oqFileName.simplified();
-
     ui->lblStatus->setText("Saving... Building PCA, please wait ...");
     connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state06);
     webSocket->sendBinaryMessage(request.toStdString().c_str());
@@ -384,6 +415,7 @@ void Analytics::state06(QByteArray message){
     ui->panelButtons->show();
     ui->panelMining->show();
     ui->lblStatus->setText("CBIR is ready!");
+    unlockWidgets();
 }
 
 void Analytics::fillQueryData(){
@@ -812,11 +844,13 @@ QString Analytics::buildNeighborStats(int rowId, double distToOq){
     answer += QString::number(mapInfluencedRows.values(rowId).size() + 1.0, 'f', 0) + " elements\n";
 
     double maxDensity = 0.0;
+    double sumDensity = 1.0;
     QList<uint16_t> keys = mapInfluencedRows.uniqueKeys();
     for (auto x : qAsConst(keys)){
         if (mapInfluencedRows.values(x).size() > maxDensity){
             maxDensity = mapInfluencedRows.values(x).size();
         }
+        sumDensity += mapInfluencedRows.values(x).size() + 1.0;
     }
     maxDensity += 1.0;
 
@@ -827,7 +861,7 @@ QString Analytics::buildNeighborStats(int rowId, double distToOq){
     answer += "~" + QString::number(((mapInfluencedRows.values(rowId).size() + 1.0)/maxDensity)*100.0, 'f', 2) + "% \n";
 
     answer += "Global cluster density:\n  ";
-    answer += "~" + QString::number(((mapInfluencedRows.values(rowId).size() + 1.0)/((double) tempRInfset.size() - 1.0))*100.0, 'f', 2) + "% \n";
+    answer += "~" + QString::number(((mapInfluencedRows.values(rowId).size() + 1.0)/sumDensity)*100.0, 'f', 2) + "% \n";
 
     colPos = rInfset.locateColumn(ui->cbxTarget->currentText());
     colPos2 = rSet.locateColumn(ui->cbxTarget->currentText());
@@ -848,7 +882,7 @@ QString Analytics::buildNeighborStats(int rowId, double distToOq){
     answer += QString(caption.c_str()) + ")\n";
 
     answer += "%Elements matching visual mining target:\n  ";
-    answer += "~" + QString::number(( (sum + 0.0)/(mapInfluencedRows.values(rowId).size() + 1.0))*100, 'f', 2) + "% (" + ui->cbxTarget->currentText()+ ") ";
+    answer += "~" + QString::number(( (sum + 0.0)/(mapInfluencedRows.values(rowId).size() + 1.0))*100, 'f', 2) + "% (" + caption.c_str() + ") ";
     answer += "~" + QString::number( (1.0 - ( (sum + 0.0)/(mapInfluencedRows.values(rowId).size() + 1.0)))*100.0, 'f', 2) + "% (others) \n";
 
     answer += "#Values distinct to visual mining target:\n  ";
@@ -953,7 +987,6 @@ void Analytics::on_btnUpdate_clicked(){
     //Calculate density and coverage of the largest cluster
     maxDensity = 0.0f;
     maxAbsFar = 0.0f;
-    alpha = 0.0f;
     QList<uint16_t> keys = mapInfluencedRows.uniqueKeys();
     for (auto x : qAsConst(keys)){
         if (mapInfluencedRows.values(x).size() > maxDensity){
@@ -1129,6 +1162,7 @@ void Analytics::state08(QByteArray message){
     disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state08);
     ui->lblStatus->setText("CBIR is ready!");
     bufferViewer->showFullScreen();
+    unlockWidgets();
 }
 
 
@@ -1140,7 +1174,7 @@ void Analytics::on_btnClose_clicked(){
 void Analytics::on_btnSearchOq_clicked(){
 
     ui->lblStatus->setText("Building query, please wait...");
-    ui->centralwidget->setEnabled(false);
+    lockWidgets();
 
     QString queryObjectValue, tblName, condition;
     SirenSQLQuery queryT;
@@ -1195,9 +1229,9 @@ void Analytics::on_btnSearchOq_clicked(){
     //Order by
     queryT.addOrderByAttribute(tblName + ".Id");
 
+    bufferQuery = queryT.generateQuery();
     if (userId != -1){
         ui->lblStatus->setText("Saving provenance, please wait ...");
-        bufferQuery = queryT.generateQuery();        ;
         connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state09);
         webSocket->sendBinaryMessage(Util::buildProvenanceInsert(userId, oqId, tableName, "search after analytics", bufferQuery, "NONE").toStdString().c_str());
     } else {
@@ -1209,6 +1243,7 @@ void Analytics::state09(QByteArray message){
 
     disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state09);
     ui->lblStatus->setText("Searching, please wait ...");
+
     connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state07);
     webSocket->sendBinaryMessage(bufferQuery.toStdString().c_str());
 }
@@ -1256,8 +1291,7 @@ void Analytics::state07(QByteArray message){
         ui->lblStatus->setText("Empty result set!");
     }
 
-    //Unlocking widgets...
-    ui->centralwidget->setEnabled(true);
+    unlockWidgets();
     ui->lblStatus->setText("CBIR is ready!");
 }
 

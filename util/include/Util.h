@@ -6,6 +6,7 @@
 #include <QFileInfo>
 #include <QDir>
 #include <QDateTime>
+#include <QDebug>
 
 //Artemis includes
 #include <ImageBase.h>
@@ -17,6 +18,8 @@
 
 //Hermes includes
 #include <BasicArrayObject.h>
+
+const QString WFS_NAME = "fs/";
 
 class Util{
 
@@ -37,6 +40,7 @@ class Util{
 
         static void saveImageAndThumbnailToFS(QString filename, QByteArray imgStream);
         static void saveImageAndThumbnailToFS(QString filename, QByteArray imgStream, QSize thumbSize);
+        static void removeDirectoryAndContent(QString dirPath = WFS_NAME);
         static void removeImage(QString filename);
         static void print(QStringList list);
 

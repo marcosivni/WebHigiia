@@ -89,6 +89,9 @@ class Analytics : public QMainWindow {
         void fillNeighborImage(int rSetRowId);
         void populateData();
 
+        void lockWidgets();
+        void unlockWidgets();
+
         //State-machine for sync data loading
         void state01(QByteArray message);
         void state02(QByteArray message);

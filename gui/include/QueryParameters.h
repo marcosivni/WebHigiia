@@ -29,12 +29,15 @@ class QueryParameters : public QMainWindow{ Q_OBJECT
         FeatureVector oq;
         int32_t studyId;
         int32_t userId;
+
         //Store both query and result set before the insertion of provenance data
         QByteArray bufferRSet;
         QString provQuery;
 
     private:
         void loadScope();
+        void lockWidgets();
+        void unlockWidgets();
 
 	private slots:
         void state01(QByteArray message);
