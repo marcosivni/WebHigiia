@@ -51,13 +51,12 @@ QImage* Util::convertImageToQImage(Image *src){
 
     for(size_t x = 0; x < src->getWidth(); x++){
         for (size_t y = 0; y < src->getHeight(); y++){
-            uint16_t pp = (uint16_t) (src->getPixel(x, y).getGrayPixelValue()/div);
-            //
-            if (    (src->getPixel(x, y).getGrayPixelValue() == pow(2.0, src->getBitsPerPixel()))
-                 || (src->getPixel(x, y).getGrayPixelValue() == 4095)){
-                pp = 0;
+            uint16_t pp;
+            if (src->isPhotometric()){
+                pp = (uint16_t) (65535 - src->getPixel(x, y).getGrayPixelValue())/div;
+            } else {
+                pp = (uint16_t) src->getPixel(x, y).getGrayPixelValue()/div;
             }
-            //
             image->setPixel(x, y, qRgb(pp, pp, pp));
         }
     }

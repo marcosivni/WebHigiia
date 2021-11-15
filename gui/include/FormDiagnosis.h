@@ -26,7 +26,7 @@ class FormDiagnosis : public QMainWindow{
         Ui::FormDiagnosis *ui;
         QStringList attributeList;
         QWebSocket *webSocket;
-        QString tableName;
+        QString tableName, obsText;
         uint16_t imageId, userId;
 
     private:
@@ -34,12 +34,20 @@ class FormDiagnosis : public QMainWindow{
         void state02(QByteArray message);
 
     public:
-        explicit FormDiagnosis(Image queryImage, uint16_t imageId, QString tableName, QWebSocket *webSocket, uint16_t userId = -1, QWidget *parent = nullptr);
+        explicit FormDiagnosis(Image queryImage,
+                               uint16_t imageId,
+                               QString tableName,
+                               QString obsText,
+                               QWebSocket *webSocket,
+                               uint16_t userId = -1,
+                               QWidget *parent = nullptr);
         ~FormDiagnosis();
 
+    signals:
+        void finished();
 
     private slots:
-        void on_btnExit_clicked();
+        //void on_btnExit_clicked();
         void on_btnSave_clicked();
 };
 

@@ -76,6 +76,8 @@ class Analytics : public QMainWindow {
         int32_t oqId, userId;
         OberonViewer *bufferViewer;
         QString bufferQuery;
+        FormDiagnosis *diagnosis;
+        QString link;
 
     private:
         std::vector<std::pair<double, double>> spiral(const uint16_t N, double *farthestInAxis = nullptr);
@@ -102,8 +104,13 @@ class Analytics : public QMainWindow {
         void state07(QByteArray message);
 
         //State-machine for provenance collection
-        void state08(QByteArray message);
+        void state08();
         void state09(QByteArray message);
+
+        void state10();
+        void state11();
+        void state12(QByteArray message);
+        void state13();
 
         QString buildOqScope();
         QString buildOqStats();
@@ -127,6 +134,7 @@ class Analytics : public QMainWindow {
                            QWebSocket *webSocket,
                            int32_t oqId,
                            int32_t userId,
+                           QString link,
                            QWidget *parent = nullptr);
         ~Analytics();
 
@@ -145,6 +153,7 @@ class Analytics : public QMainWindow {
         void on_btnClose_clicked();
         void on_btnSearchOq_clicked();
         void on_btnNewDiagnosis_clicked();
+        void on_btnPACS_clicked();
 };
 
 #endif // ANALYTICS_H

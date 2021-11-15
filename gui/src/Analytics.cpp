@@ -9,7 +9,7 @@ Analytics::Analytics(QString tableName,
                      MedicalImageTable rSet,
                      bool vTable,
                      QString vTableName,
-                     QWebSocket *webSocket, int32_t oqId, int32_t userId,
+                     QWebSocket *webSocket, int32_t oqId, int32_t userId, QString link,
                      QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::Analytics){
@@ -50,6 +50,8 @@ Analytics::Analytics(QString tableName,
     this->vTableName = vTableName;
     this->oqId = oqId;
     this->userId = userId;
+    this->diagnosis = nullptr;
+    this->link = link;
 
     seriesByTarget = nullptr;
     chart = nullptr;
@@ -124,6 +126,10 @@ Analytics::~Analytics(){
     mapPointToRowId.clear();
     dataset2D.clear();
 
+    if (diagnosis != nullptr){
+        delete (diagnosis);
+    }
+
     delete ui;
 }
 
@@ -164,6 +170,7 @@ void Analytics::state02(QByteArray message){
     disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state02);
     ResultTable scope(Util::toStringList(message.split('\n')));
 
+    scopeAtts.clear();
     scopeAtts.append("Image_Class");
     if (scope.size()){
         for (int x = 0; x < scope.size(); x++){
@@ -203,6 +210,7 @@ void Analytics::loadInfluencedImages(){
         queryT.addWhereAttribute(tableName + ".Id = " + rSet.fetchByColumnId(iteratorRSet, colId));
 
         //Blocking call - State machine
+        ui->lblStatus->setText("Fetching query data " + QString::number(iteratorRSet) + "/" + QString::number(rSet.size()) + ", please wait ...");
         connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state03);
         webSocket->sendBinaryMessage(queryT.generateQuery().toStdString().c_str());
     } else {
@@ -255,6 +263,7 @@ void Analytics::state03(QByteArray message){
         queryT.addWhereAttribute(tableName + ".Id = " + rSet.fetchByColumnId(iteratorRSet, colId));
 
         //Blocking call - State machine
+        ui->lblStatus->setText("Fetching query data " + QString::number(iteratorRSet) + "/" + QString::number(rSet.size()) + ", please wait ...");
         connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state03);
         webSocket->sendBinaryMessage(queryT.generateQuery().toStdString().c_str());
     } else {
@@ -336,7 +345,8 @@ void Analytics::downloadNonInfluencedImages(){
     posImg = rSet.locateImageFilename();
 
     while ((counterImgs < rSet.size()) &&
-           (QFileInfo::exists(rSet.fetchByColumnId(counterImgs, posImg)) && QFileInfo(rSet.fetchByColumnId(counterImgs, posImg)).isFile())){
+           (QFileInfo::exists(WFS_NAME + rSet.fetchByColumnId(counterImgs, posImg))
+            && QFileInfo(WFS_NAME + rSet.fetchByColumnId(counterImgs, posImg)).isFile())){
         counterImgs++;
     }
 
@@ -369,7 +379,8 @@ void Analytics::state05(QByteArray message){
     counterImgs++;
 
     while ((counterImgs < rSet.size()) &&
-           (QFileInfo::exists(rSet.fetchByColumnId(counterImgs, posImg)) && QFileInfo(rSet.fetchByColumnId(counterImgs, posImg)).isFile())){
+           (QFileInfo::exists(WFS_NAME + rSet.fetchByColumnId(counterImgs, posImg))
+            && QFileInfo(WFS_NAME + rSet.fetchByColumnId(counterImgs, posImg)).isFile())){
         counterImgs++;
     }
 
@@ -386,10 +397,28 @@ void Analytics::state05(QByteArray message){
 void Analytics::downloadOq(){
 
     ui->lblStatus->setText("Downloading query image, please wait ...");
-    QString request = "REQUEST " + oqFileName.simplified();
-    ui->lblStatus->setText("Saving... Building PCA, please wait ...");
-    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state06);
-    webSocket->sendBinaryMessage(request.toStdString().c_str());
+    if (QFileInfo::exists(WFS_NAME + oqFileName.simplified() )
+            && QFileInfo(WFS_NAME + oqFileName.simplified()).isFile()){
+        dataset2D = pca2D();
+        fillQueryData();
+        populateData();
+
+        //Predicting query image scope
+        ui->lblScopeOq->setText(buildOqScope());
+        ui->lblStatsOq->setText(buildOqStats());
+
+        //Unlocking main screen...
+        ui->gbxOq->show();
+        ui->panelButtons->show();
+        ui->panelMining->show();
+        ui->lblStatus->setText("CBIR is ready!");
+        unlockWidgets();
+    } else {
+        QString request = "REQUEST " + oqFileName.simplified();
+        ui->lblStatus->setText("Saving... Building PCA, please wait ...");
+        connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state06);
+        webSocket->sendBinaryMessage(request.toStdString().c_str());
+    }
 }
 
 void Analytics::state06(QByteArray message){
@@ -511,95 +540,99 @@ FeatureVectorList Analytics::pca2D(){
     FeatureVectorList dataset, redDataset;
     FeatureVector oi;
     int colInfluenced = rSet.locateColumn(simAttribute + "$bridged");
+    size_t cardinality = dataset.size();
+    size_t dimensionality = oi.size();
+
 
     //Fast PCA - rSet entries only
-    for (int x = 0; x < rSet.size(); x++){        
+    for (int x = 0; x < rSet.size(); x++){
         oi.unserializeFromString(FeatureVector::fromBase64(rSet.fetchByColumnId(x, colInfluenced).toStdString()));
         dataset.push_back(oi);
     }
     //Insert oq at the end
     dataset.push_back(oq);
 
-    size_t cardinality = dataset.size();
-    size_t dimensionality = oi.size();
+    if (dimensionality > 2){
+        //[0-1] scale
+        unitaryScale(&dataset);
 
-    //[0-1] scale
-    unitaryScale(&dataset);
+        Eigen::VectorXd means = Eigen::VectorXd::Zero(dimensionality);
+        Eigen::MatrixXd mcov(dimensionality,dimensionality);
 
-    Eigen::VectorXd means = Eigen::VectorXd::Zero(dimensionality);
-    Eigen::MatrixXd mcov(dimensionality,dimensionality);
-
-    for(size_t j = 0; j < dimensionality; j++){
-        for(size_t i = 0; i < cardinality; i++){
-            means(j) += (dataset[i][j] / ((double) cardinality));
-        }
-    }
-
-    for(size_t i = 0; i < cardinality; i++){
         for(size_t j = 0; j < dimensionality; j++){
-            dataset[i][j] -= means[j];
-        }
-    }
-
-    means = Eigen::VectorXd::Zero(dimensionality);
-    for(size_t j = 0; j < dimensionality; j++){
-        for(size_t i = 0; i < cardinality; i++){
-            means(j) += (dataset[i][j] / ((double) cardinality));
-        }
-    }
-
-    for(size_t k = 0; k < dimensionality; k++){
-        for(size_t j = 0; j < dimensionality; j++){
-            double sum = 0.0;
             for(size_t i = 0; i < cardinality; i++){
-                sum += (dataset[i][j] - means[j])*(dataset[i][k] - means[k]);
+                means(j) += (dataset[i][j] / ((double) cardinality));
             }
-            sum /= ((double) cardinality - 1.0);
-            mcov(k, j) = sum;
         }
-    }
 
-    Eigen::EigenSolver<Eigen::MatrixXd> es(mcov);
-    Eigen::MatrixXd eigenvectors(dimensionality, dimensionality);
-    Eigen::MatrixXd sorted_eigenvectors(dimensionality, dimensionality);
-
-    for(size_t k = 0; k < dimensionality;k++){
-        for(size_t p = 0; p < dimensionality;p++){
-            eigenvectors(k,p) = es.eigenvectors().col(p)[k].real();
+        for(size_t i = 0; i < cardinality; i++){
+            for(size_t j = 0; j < dimensionality; j++){
+                dataset[i][j] -= means[j];
+            }
         }
-    }
 
-    // Sort by ascending eigenvalues
-    std::vector<std::pair<double, size_t> > sortEigen;
-    sortEigen.reserve(dimensionality);
-    for (size_t x = 0; x < dimensionality; x++){
-        double aux = (double) es.eigenvalues().real().coeff(x, 0);
-        std::pair<double, size_t> pairEigenIndex(aux, x);
-        sortEigen.push_back(pairEigenIndex);
-    }
-    std::sort(sortEigen.begin(), sortEigen.end());
+        means = Eigen::VectorXd::Zero(dimensionality);
+        for(size_t j = 0; j < dimensionality; j++){
+            for(size_t i = 0; i < cardinality; i++){
+                means(j) += (dataset[i][j] / ((double) cardinality));
+            }
+        }
 
-    for (size_t x = 0; x < sortEigen.size(); x++){
-        sorted_eigenvectors.col(x) = eigenvectors.col(sortEigen[x].second);
-    }
+        for(size_t k = 0; k < dimensionality; k++){
+            for(size_t j = 0; j < dimensionality; j++){
+                double sum = 0.0;
+                for(size_t i = 0; i < cardinality; i++){
+                    sum += (dataset[i][j] - means[j])*(dataset[i][k] - means[k]);
+                }
+                sum /= ((double) cardinality - 1.0);
+                mcov(k, j) = sum;
+            }
+        }
 
-    //Reduce data
-    oi.resize(2);
-    for (size_t z = 0; z < 2; z++){
-        oi[z] = 0.0;
-    }
-    for (size_t x = 0; x < cardinality; x++){
-        oi.setOID(dataset.at(x).GetOID());
-        redDataset.push_back(oi);
-    }
+        Eigen::EigenSolver<Eigen::MatrixXd> es(mcov);
+        Eigen::MatrixXd eigenvectors(dimensionality, dimensionality);
+        Eigen::MatrixXd sorted_eigenvectors(dimensionality, dimensionality);
 
+        for(size_t k = 0; k < dimensionality;k++){
+            for(size_t p = 0; p < dimensionality;p++){
+                eigenvectors(k,p) = es.eigenvectors().col(p)[k].real();
+            }
+        }
 
-    for (size_t y = dimensionality-1; y >= dimensionality-2; y--){
+        // Sort by ascending eigenvalues
+        std::vector<std::pair<double, size_t> > sortEigen;
+        sortEigen.reserve(dimensionality);
+        for (size_t x = 0; x < dimensionality; x++){
+            double aux = (double) es.eigenvalues().real().coeff(x, 0);
+            std::pair<double, size_t> pairEigenIndex(aux, x);
+            sortEigen.push_back(pairEigenIndex);
+        }
+        std::sort(sortEigen.begin(), sortEigen.end());
+
+        for (size_t x = 0; x < sortEigen.size(); x++){
+            sorted_eigenvectors.col(x) = eigenvectors.col(sortEigen[x].second);
+        }
+
+        //Reduce data
+        oi.resize(2);
+        for (size_t z = 0; z < 2; z++){
+            oi[z] = 0.0;
+        }
         for (size_t x = 0; x < cardinality; x++){
-            for (size_t z = 0; z < dimensionality; z++){
-                redDataset[x][dimensionality-y-1] += dataset[x][z]*sorted_eigenvectors.col(y)[z];
+            oi.setOID(dataset.at(x).GetOID());
+            redDataset.push_back(oi);
+        }
+
+
+        for (size_t y = dimensionality-1; y >= dimensionality-2; y--){
+            for (size_t x = 0; x < cardinality; x++){
+                for (size_t z = 0; z < dimensionality; z++){
+                    redDataset[x][dimensionality-y-1] += dataset[x][z]*sorted_eigenvectors.col(y)[z];
+                }
             }
         }
+    } else {
+        redDataset = dataset;
     }
     //PCA-Whitening
     unitaryScale(&redDataset);
@@ -1008,7 +1041,7 @@ void Analytics::on_btnUpdate_clicked(){
         std::string legend;
 
         if (scopeCaption.findCaption(ui->cbxTarget->currentText(), targets[x-1], &legend)){
-            seriesByTarget[x]->setName(targets[x-1] + " = " + legend.c_str());
+            seriesByTarget[x]->setName(legend.c_str());
         } else {
             seriesByTarget[x]->setName(targets[x-1]);
         }
@@ -1097,70 +1130,29 @@ void Analytics::on_btnStatsOq_clicked(){
 
 void Analytics::on_btnSearchOi_clicked(){
 
-    MedicalImageTable newRSet;
-    QString influencer, scopeAttributes;
-    int col;
-
-
-    newRSet.addCaption(rInfset.fetchCaption());
-    for (int x = 0; x < rInfset.dimensionality(); x++){
-        col = Util::findColumn(rInfset.fetchCaption(x), rSet.fetchCaption());
-        if (x > 0){
-            influencer += ", ";
-        }
-        if (col == -1){
-            influencer += "";
-        } else{
-            influencer += rSet.fetchByColumnId(ui->btnOi->whatsThis().toUInt(), col);
-        }
-    }
-
-    newRSet.addTuple(influencer);
-
-    for (int x = 0; x < mapInfluencedRows.values(ui->btnOi->whatsThis().toUInt()).size(); x++){
-        newRSet.addTuple(rInfset.fetchTupleByRowId(mapInfluencedRows.values(ui->btnOi->whatsThis().toUInt()).at(x)));
-    }
-
-    for (int x = 0; x < scopeAtts.size(); x++){
-        if (x > 0){
-            scopeAttributes += ", ";
-        }
-        scopeAttributes += scopeAtts[x];
-    }
-
-    bufferViewer = nullptr;
-    if (newRSet.size() > 0){
-        bufferViewer = new OberonViewer(false,
-                                        scopeAttributes,
-                                        tableName,
-                                        oqFileName,
-                                        simAttribute,
-                                        oq,
-                                        newRSet,
-                                        Util::SIMILARITY_SEARCH,
-                                        newRSet.size() - 1,
-                                        1,
-                                        tableName,
-                                        metricName,
-                                        webSocket,
-                                        oqId,
-                                        userId,
-                                        nullptr);
-    }
-
     if (userId != -1){
-        ui->lblStatus->setText("Saving provenance, please wait... ");
-        connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state08);
-        webSocket->sendBinaryMessage(Util::buildProvenanceInsert(userId, oqId, tableName, "bridge expansion", newRSet.toString(), QString::number(newRSet.size())).toStdString().c_str());
+        lockWidgets();
+
+        Image *currentImage = Util::openImage(oqFileName);
+        if (diagnosis != nullptr){
+            delete (diagnosis);
+        }
+        diagnosis = new FormDiagnosis(*currentImage, oqId, tableName, "origin: Query_Expansion_Analytics", webSocket, userId);
+        connect(diagnosis, &FormDiagnosis::finished, this, &Analytics::state11);
+        delete (currentImage);
+
+        diagnosis->showFullScreen();
+
     } else {
-        state08(QByteArray());
+        ui->lblStatus->setText("Reports are not allowed in this mode (provenance-disabled)!");
     }
 }
 
-void Analytics::state08(QByteArray message){
+void Analytics::state08(){
 
     disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state08);
     ui->lblStatus->setText("CBIR is ready!");
+    //scopeAtts.clear();
     bufferViewer->showFullScreen();
     unlockWidgets();
 }
@@ -1168,11 +1160,120 @@ void Analytics::state08(QByteArray message){
 
 void Analytics::on_btnClose_clicked(){
 
+    if (userId != -1){
+
+        ui->lblStatus->setEnabled(false);
+        Image *currentImage = Util::openImage(oqFileName);
+        if (diagnosis != nullptr){
+            delete (diagnosis);
+        }
+        diagnosis = new FormDiagnosis(*currentImage, oqId, tableName, "origin: Analytics_exit", webSocket, userId);
+        connect(diagnosis, &FormDiagnosis::finished, this, &Analytics::state13);
+        delete (currentImage);
+        diagnosis->showFullScreen();
+    } else {
+        ui->lblStatus->setText("Reports are not allowed in this mode (provenance-disabled)!");
+    }
+}
+
+void Analytics::state13(){
+
+    disconnect(diagnosis, &FormDiagnosis::finished, this, &Analytics::state13);
     this->close();
 }
 
 void Analytics::on_btnSearchOq_clicked(){
 
+    if (userId != -1){
+        Image *currentImage = Util::openImage(oqFileName);
+        if (diagnosis != nullptr){
+            delete (diagnosis);
+        }
+        diagnosis = new FormDiagnosis(*currentImage, oqId, tableName, "origin: Query_CBIR_Analytics", webSocket, userId);
+        connect(diagnosis, &FormDiagnosis::finished, this, &Analytics::state10);
+        delete (currentImage);
+        diagnosis->showFullScreen();
+    } else {
+        ui->lblStatus->setText("Reports are not allowed in this mode (provenance-disabled)!");
+    }
+}
+
+void Analytics::state09(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state09);
+    ui->lblStatus->setText("Searching, please wait ...");
+
+    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state07);
+    webSocket->sendBinaryMessage(bufferQuery.toStdString().c_str());
+}
+
+void Analytics::state07(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state07);
+
+    MedicalImageTable trSet(Util::toStringList(message.split('\n')));
+    QString scopeAttributes, tblName;
+
+    //Query table
+    if (vTable){
+        tblName = "temp";
+    } else {
+        tblName = tableName;
+    }
+    for (int x = 0; x < scopeAtts.size(); x++){
+        if (x){
+            scopeAttributes += ", ";
+        }
+        scopeAttributes += tblName + "." + scopeAtts.at(x);
+    }
+
+    bufferViewer = nullptr;
+    if (trSet.size()){
+        bufferViewer = new OberonViewer(vTable,
+                                        scopeAttributes,
+                                        tableName,
+                                        oqFileName,
+                                        simAttribute,
+                                        oq,
+                                        trSet,
+                                        searchType,
+                                        ui->txtNumberNeighbors->text().toUInt(),
+                                        ui->txtNumberDiversity->text().toUInt(),
+                                        vTableName,
+                                        metricName,
+                                        webSocket,
+                                        oqId,
+                                        userId,
+                                        link,
+                                        nullptr);
+        bufferViewer->showFullScreen();
+    } else {
+        ui->lblStatus->setText("Empty result set!");
+    }
+
+    unlockWidgets();
+    ui->lblStatus->setText("CBIR is ready!");
+}
+
+
+void Analytics::on_btnNewDiagnosis_clicked(){
+
+    if (userId != -1){
+        Image *currentImage = Util::openImage(oqFileName);
+        if (diagnosis != nullptr){
+            delete (diagnosis);
+        }
+        diagnosis = new FormDiagnosis(*currentImage, oqId, tableName, "origin: Report_after_Analytics", webSocket, userId);
+        delete (currentImage);
+        diagnosis->showFullScreen();
+    } else {
+        ui->lblStatus->setText("Reports are not allowed in this mode (provenance-disabled)!");
+    }
+}
+
+void Analytics::state10(){
+
+    disconnect(diagnosis, &FormDiagnosis::finished, this, &Analytics::state10);
     ui->lblStatus->setText("Building query, please wait...");
     lockWidgets();
 
@@ -1230,27 +1331,76 @@ void Analytics::on_btnSearchOq_clicked(){
     queryT.addOrderByAttribute(tblName + ".Id");
 
     bufferQuery = queryT.generateQuery();
-    if (userId != -1){
-        ui->lblStatus->setText("Saving provenance, please wait ...");
-        connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state09);
-        webSocket->sendBinaryMessage(Util::buildProvenanceInsert(userId, oqId, tableName, "search after analytics", bufferQuery, "NONE").toStdString().c_str());
-    } else {
-        state09(QByteArray());
-    }
-}
 
-void Analytics::state09(QByteArray message){
-
-    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state09);
-    ui->lblStatus->setText("Searching, please wait ...");
-
-    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state07);
+    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state12);
     webSocket->sendBinaryMessage(bufferQuery.toStdString().c_str());
 }
 
-void Analytics::state07(QByteArray message){
+void Analytics::state11(){
 
-    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state07);
+    disconnect(diagnosis, &FormDiagnosis::finished, this, &Analytics::state11);
+
+    MedicalImageTable newRSet;
+    QString influencer, scopeAttributes;
+    int col;
+
+
+    newRSet.addCaption(rInfset.fetchCaption());
+    for (int x = 0; x < rInfset.dimensionality(); x++){
+        col = Util::findColumn(rInfset.fetchCaption(x), rSet.fetchCaption());
+        if (x > 0){
+            influencer += ", ";
+        }
+        if (col == -1){
+            influencer += "";
+        } else{
+            influencer += rSet.fetchByColumnId(ui->btnOi->whatsThis().toUInt(), col);
+        }
+    }
+
+    newRSet.addTuple(influencer);
+
+    for (int x = 0; x < mapInfluencedRows.values(ui->btnOi->whatsThis().toUInt()).size(); x++){
+        newRSet.addTuple(rInfset.fetchTupleByRowId(mapInfluencedRows.values(ui->btnOi->whatsThis().toUInt()).at(x)));
+    }
+
+    for (int x = 0; x < scopeAtts.size(); x++){
+        if (x > 0){
+            scopeAttributes += ", ";
+        }
+        scopeAttributes += scopeAtts[x];
+    }
+
+    bufferViewer = nullptr;
+    if (newRSet.size() > 0){
+        bufferViewer = new OberonViewer(false,
+                                        scopeAttributes,
+                                        tableName,
+                                        oqFileName,
+                                        simAttribute,
+                                        oq,
+                                        newRSet,
+                                        Util::SIMILARITY_SEARCH,
+                                        newRSet.size() - 1,
+                                        1,
+                                        tableName,
+                                        metricName,
+                                        webSocket,
+                                        oqId,
+                                        userId,
+                                        link,
+                                        nullptr);
+    } else {
+        ui->lblStatus->setText("Empty result set!");
+        return;
+    }
+
+    state08();
+}
+
+void Analytics::state12(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state12);
 
     MedicalImageTable trSet(Util::toStringList(message.split('\n')));
     QString scopeAttributes, tblName;
@@ -1285,6 +1435,7 @@ void Analytics::state07(QByteArray message){
                                         webSocket,
                                         oqId,
                                         userId,
+                                        link,
                                         nullptr);
         bufferViewer->showFullScreen();
     } else {
@@ -1293,18 +1444,13 @@ void Analytics::state07(QByteArray message){
 
     unlockWidgets();
     ui->lblStatus->setText("CBIR is ready!");
+
+    state08();
 }
 
 
-void Analytics::on_btnNewDiagnosis_clicked(){
+void Analytics::on_btnPACS_clicked(){
 
-    if (userId != -1){
-        Image *currentImage = Util::openImage(oqFileName);
-        FormDiagnosis *diagnosis = new FormDiagnosis(*currentImage, oqId, tableName, webSocket, userId);
-        delete (currentImage);
-        diagnosis->showFullScreen();
-    } else {
-        ui->lblStatus->setText("Reports are not allowed in this mode (provenance-disabled)!");
-    }
+    QDesktopServices::openUrl(QUrl("https://www.dicomlibrary.com?study=" + link, QUrl::TolerantMode));
 }
 

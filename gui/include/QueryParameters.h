@@ -14,6 +14,7 @@
 #include <Analytics.h>
 #include <MedicalImageTable.h>
 #include <SirenSqlQuery.h>
+#include <FormDiagnosis.h>
 
 namespace Ui {
     class QueryParameters;
@@ -58,6 +59,7 @@ class QueryParameters : public QMainWindow{ Q_OBJECT
         void on_btnClose_clicked();
         void on_btnViewStudy_clicked();
         void on_btnAnalytics_clicked();
+        void on_btnDiagnosis_clicked();
 
     public:
         explicit QueryParameters(int32_t studyId, QString tableName, QString imageFile, QWebSocket *webSocket, int32_t userId = -1, QWidget *parent = 0);

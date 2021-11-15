@@ -6,7 +6,6 @@
 #include <QFileInfo>
 #include <QDir>
 #include <QDateTime>
-#include <QDebug>
 
 //Artemis includes
 #include <ImageBase.h>

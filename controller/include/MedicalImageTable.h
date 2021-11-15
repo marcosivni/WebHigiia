@@ -1,8 +1,6 @@
 #ifndef MEDICALIMAGETABLE_H
 #define MEDICALIMAGETABLE_H
 
-#include <QDebug>
-
 //Higiia includes
 #include <ResultTable.h>
 

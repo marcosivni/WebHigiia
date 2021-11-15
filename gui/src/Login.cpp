@@ -39,6 +39,7 @@ Login::Login(QWebSocket *webSocket, QWidget *parent) : QMainWindow(parent), ui(n
 */
 Login::~Login() {
 
+    Util::removeDirectoryAndContent();
     delete ui;
 }
 

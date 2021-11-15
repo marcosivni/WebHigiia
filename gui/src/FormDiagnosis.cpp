@@ -1,14 +1,14 @@
 #include "FormDiagnosis.h"
 #include "ui_FormDiagnosis.h"
 
-FormDiagnosis::FormDiagnosis(Image queryImage, uint16_t imageId, QString tableName, QWebSocket *webSocket, uint16_t userId, QWidget *parent ) :
+FormDiagnosis::FormDiagnosis(Image queryImage, uint16_t imageId, QString tableName, QString obsText, QWebSocket *webSocket, uint16_t userId, QWidget *parent ) :
     QMainWindow(parent),
     ui(new Ui::FormDiagnosis)
 {
     ui->setupUi(this);
 
     /* Delete this object when the form is closed */
-    this->setAttribute(Qt::WA_DeleteOnClose);
+   // this->setAttribute(Qt::WA_DeleteOnClose);
 
     QDesktopWidget *desktop = QApplication::desktop();
 
@@ -33,7 +33,7 @@ FormDiagnosis::FormDiagnosis(Image queryImage, uint16_t imageId, QString tableNa
     //load query image
     QImage *aux = Util::convertImageToQImage(&queryImage);
     ui->lblImage->clear();
-    ui->lblImage->setPixmap(QPixmap::fromImage(aux->scaled(600, 600)));
+    ui->lblImage->setPixmap(QPixmap::fromImage(aux->scaled(800, 800)));
     delete (aux);
     //
 
@@ -41,6 +41,7 @@ FormDiagnosis::FormDiagnosis(Image queryImage, uint16_t imageId, QString tableNa
     this->tableName = tableName;
     this->webSocket = webSocket;
     this->userId = userId;
+    this->obsText = obsText;
 
     SirenSQLQuery buildScope;
     buildScope.addProjectionAttribute("attributeName");
@@ -67,12 +68,12 @@ void FormDiagnosis::state01(QByteArray message){
 
     //Create QLabels for the query scope
     for (int x = 0; x < scopeTable.size(); x++){
-        ui->lytScrollArea->addWidget(new QLabel("- ITEM: " + scopeTable.fetchByColumnId(x, 0), this));
+        ui->lytScrollArea->addWidget(new QLabel("- ITEM FOR ANNOTATION: " + scopeTable.fetchByColumnId(x, 0), this));
         attributeList.append(scopeTable.fetchByColumnId(x, 0));
-        ui->lytScrollArea->addWidget(new QPlainTextEdit("<Empty>", this));
+        ui->lytScrollArea->addWidget(new QPlainTextEdit("<Write your report here>", this));
     }
     ui->lytScrollArea->addWidget(new QLabel("Details", this));
-    ui->lytScrollArea->addWidget(new QPlainTextEdit("<Empty>", this));
+    ui->lytScrollArea->addWidget(new QPlainTextEdit(obsText, this));
 
     ui->frmButtons->setEnabled(true);
     ui->lytScrollArea->setEnabled(true);
@@ -86,10 +87,11 @@ FormDiagnosis::~FormDiagnosis(){
     delete ui;
 }
 
-void FormDiagnosis::on_btnExit_clicked(){
+//void FormDiagnosis::on_btnExit_clicked(){
 
-    this->close();
-}
+//    emit finished();
+//    this->close();
+//}
 
 
 void FormDiagnosis::on_btnSave_clicked(){
@@ -119,7 +121,10 @@ void FormDiagnosis::on_btnSave_clicked(){
 
 void FormDiagnosis::state02(QByteArray message){
 
-    ui->lblStatus->setText("Saved! Connected to the Server!");
     disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &FormDiagnosis::state02);
+    ui->lblStatus->setText("Saved! Connected to the Server!");
+
+    emit finished();
+    close();
 }
 

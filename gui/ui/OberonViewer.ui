@@ -477,7 +477,7 @@ QFrame{
        <enum>QFrame::Raised</enum>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
-       <item row="15" column="0" colspan="2">
+       <item row="16" column="0" colspan="2">
         <widget class="QFrame" name="frame">
          <property name="frameShape">
           <enum>QFrame::StyledPanel</enum>
@@ -539,7 +539,7 @@ QFrame{
                <x>0</x>
                <y>0</y>
                <width>208</width>
-               <height>95</height>
+               <height>68</height>
               </rect>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout">
@@ -570,44 +570,6 @@ QFrame{
          </layout>
         </widget>
        </item>
-       <item row="8" column="0">
-        <widget class="QLabel" name="lblDiversityNumber">
-         <property name="text">
-          <string>Max group size:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0" colspan="2">
-        <widget class="QLabel" name="txtQueryCenter">
-         <property name="font">
-          <font>
-           <family>Calibri</family>
-           <pointsize>9</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
-p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Cantarell'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Query Center&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-         </property>
-        </widget>
-       </item>
-       <item row="13" column="0" colspan="2">
-        <widget class="QPushButton" name="btnExit">
-         <property name="text">
-          <string>Exit</string>
-         </property>
-        </widget>
-       </item>
-       <item row="12" column="0" colspan="2">
-        <widget class="QPushButton" name="btnDiagnosis">
-         <property name="text">
-          <string>Report Diagnosis</string>
-         </property>
-        </widget>
-       </item>
        <item row="7" column="1">
         <widget class="QLineEdit" name="txtKnn">
          <property name="font">
@@ -636,19 +598,27 @@ p, li { white-space: pre-wrap; }
          </property>
         </widget>
        </item>
-       <item row="8" column="1">
-        <widget class="QLineEdit" name="txtBridge">
-         <property name="styleSheet">
-          <string notr="true"> QLineEdit {
-     color: white;
-     border: 2px solid gray;
-     border-radius: 10px;
-     padding: 0 8px;
-     selection-background-color: darkgray;
- }</string>
+       <item row="14" column="0" colspan="2">
+        <widget class="QPushButton" name="btnExit">
+         <property name="text">
+          <string>Exit</string>
          </property>
-         <property name="inputMask">
-          <string>999</string>
+        </widget>
+       </item>
+       <item row="3" column="0" colspan="2">
+        <widget class="QLabel" name="txtQueryCenter">
+         <property name="font">
+          <font>
+           <family>Calibri</family>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Cantarell'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Query Center&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
         </widget>
        </item>
@@ -950,30 +920,6 @@ p, li { white-space: pre-wrap; }
          </property>
         </widget>
        </item>
-       <item row="10" column="0" colspan="2">
-        <widget class="QPushButton" name="btnFeedback">
-         <property name="font">
-          <font>
-           <family>Calibri</family>
-           <pointsize>9</pointsize>
-           <weight>50</weight>
-           <italic>false</italic>
-           <bold>false</bold>
-           <underline>false</underline>
-           <strikeout>false</strikeout>
-          </font>
-         </property>
-         <property name="styleSheet">
-          <string notr="true"/>
-         </property>
-         <property name="text">
-          <string>Relevance FeedBack</string>
-         </property>
-         <property name="flat">
-          <bool>false</bool>
-         </property>
-        </widget>
-       </item>
        <item row="5" column="0" colspan="2">
         <widget class="QPushButton" name="btnQueryCenter">
          <property name="styleSheet">
@@ -1007,6 +953,67 @@ p, li { white-space: pre-wrap; }
            <width>200</width>
            <height>200</height>
           </size>
+         </property>
+        </widget>
+       </item>
+       <item row="12" column="0" colspan="2">
+        <widget class="QPushButton" name="btnDiagnosis">
+         <property name="text">
+          <string>Report Diagnosis</string>
+         </property>
+        </widget>
+       </item>
+       <item row="10" column="0" colspan="2">
+        <widget class="QPushButton" name="btnFeedback">
+         <property name="font">
+          <font>
+           <family>Calibri</family>
+           <pointsize>9</pointsize>
+           <weight>50</weight>
+           <italic>false</italic>
+           <bold>false</bold>
+           <underline>false</underline>
+           <strikeout>false</strikeout>
+          </font>
+         </property>
+         <property name="styleSheet">
+          <string notr="true"/>
+         </property>
+         <property name="text">
+          <string>Relevance FeedBack</string>
+         </property>
+         <property name="flat">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="0">
+        <widget class="QLabel" name="lblDiversityNumber">
+         <property name="text">
+          <string>Max group size:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="1">
+        <widget class="QLineEdit" name="txtBridge">
+         <property name="styleSheet">
+          <string notr="true"> QLineEdit {
+     color: white;
+     border: 2px solid gray;
+     border-radius: 10px;
+     padding: 0 8px;
+     selection-background-color: darkgray;
+ }</string>
+         </property>
+         <property name="inputMask">
+          <string>999</string>
+         </property>
+        </widget>
+       </item>
+       <item row="13" column="0" colspan="2">
+        <widget class="QPushButton" name="btnPACS">
+         <property name="text">
+          <string>PACS</string>
          </property>
         </widget>
        </item>

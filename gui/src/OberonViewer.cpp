@@ -15,11 +15,12 @@ OberonViewer::OberonViewer(bool vTable,
                             QString metricName,
                             QWebSocket *webSocket,
                             int32_t oqId,
-                            int32_t userId,
+                            int32_t userId, QString link,
                             QWidget *parent)
     : QMainWindow(parent), ui(new Ui::OberonViewer){
 
     ui->setupUi(this);
+
     this->setAttribute(Qt::WA_DeleteOnClose);
 
     this->searchType = searchType;
@@ -35,6 +36,8 @@ OberonViewer::OberonViewer(bool vTable,
     this->metricName = metricName;
     this->oqId = oqId;
     this->userId = userId;
+    this->diagnosis = nullptr;
+    this->link = link;
 
     ui->txtKnn->setText(QString::number(k));
     ui->txtBridge->setText(QString::number(kBridge));
@@ -74,7 +77,7 @@ void OberonViewer::splitResultSets(){
     ui->lytCentral->setEnabled(false);
 
     //In-memory FS for WASM - File sync finishes at state 04
-    if (searchType == Util::SIMILARITY_SEARCH || searchType ==Util::DIVERSITY_SEARCH){
+    if (searchType == Util::SIMILARITY_SEARCH || searchType == Util::DIVERSITY_SEARCH){
         downloadNonInfluencedImages();
     } else {
         loadInfluencedImages();
@@ -237,8 +240,8 @@ void OberonViewer::downloadInfluencedImages(){
     posId = rInfset.locateImageID();
 
     while (counterImgsDownPanel < rInfset.size()
-           && QFileInfo::exists(rInfset.fetchByColumnId(counterImgsDownPanel, posImg))
-           && QFileInfo(rInfset.fetchByColumnId(counterImgsDownPanel, posImg)).isFile()) {
+           && QFileInfo::exists(WFS_NAME + rInfset.fetchByColumnId(counterImgsDownPanel, posImg))
+           && QFileInfo(WFS_NAME + rInfset.fetchByColumnId(counterImgsDownPanel, posImg)).isFile()) {
         mapOidToNames[rInfset.fetchByColumnId(counterImgsDownPanel, posId).toUInt()] = rInfset.fetchByColumnId(counterImgsDownPanel, posImg).toStdString();
         counterImgsDownPanel++;
     }
@@ -272,8 +275,8 @@ void OberonViewer::state03(QByteArray message){
 
     counterImgsDownPanel++;
     while (counterImgsDownPanel < rInfset.size()
-           && QFileInfo::exists(rInfset.fetchByColumnId(counterImgsDownPanel, posImg))
-           && QFileInfo(rInfset.fetchByColumnId(counterImgsDownPanel, posImg)).isFile()) {
+           && QFileInfo::exists(WFS_NAME + rInfset.fetchByColumnId(counterImgsDownPanel, posImg))
+           && QFileInfo(WFS_NAME + rInfset.fetchByColumnId(counterImgsDownPanel, posImg)).isFile()) {
         mapOidToNames[rInfset.fetchByColumnId(counterImgsDownPanel, posId).toUInt()] = rInfset.fetchByColumnId(counterImgsDownPanel, posImg).toStdString();
         counterImgsDownPanel++;
     }
@@ -297,8 +300,8 @@ void OberonViewer::downloadNonInfluencedImages(){
     posId = rSet.locateImageID();
 
     while (counterImgsRightPanel < rSet.size()
-           && QFileInfo::exists(rSet.fetchByColumnId(counterImgsRightPanel, posImg))
-           && QFileInfo(rSet.fetchByColumnId(counterImgsRightPanel, posImg)).isFile()){
+           && QFileInfo::exists(WFS_NAME + rSet.fetchByColumnId(counterImgsRightPanel, posImg))
+           && QFileInfo(WFS_NAME + rSet.fetchByColumnId(counterImgsRightPanel, posImg)).isFile()){
         mapOidToNames[rSet.fetchByColumnId(counterImgsRightPanel, posId).toUInt()] = rSet.fetchByColumnId(counterImgsRightPanel, posImg).toStdString();
         counterImgsRightPanel++;
     }
@@ -334,8 +337,8 @@ void OberonViewer::state04(QByteArray message){
 
     counterImgsRightPanel++;
     while (counterImgsRightPanel < rSet.size()
-           && QFileInfo::exists(rSet.fetchByColumnId(counterImgsRightPanel, posImg))
-           && QFileInfo(rSet.fetchByColumnId(counterImgsRightPanel, posImg)).isFile()){
+           && QFileInfo::exists(WFS_NAME + rSet.fetchByColumnId(counterImgsRightPanel, posImg))
+           && QFileInfo(WFS_NAME + rSet.fetchByColumnId(counterImgsRightPanel, posImg)).isFile()){
         mapOidToNames[rSet.fetchByColumnId(counterImgsRightPanel, posId).toUInt()] = rSet.fetchByColumnId(counterImgsRightPanel, posImg).toStdString();
         counterImgsRightPanel++;
     }
@@ -353,11 +356,19 @@ void OberonViewer::state04(QByteArray message){
 void OberonViewer::downloadOq(){
 
     ui->lblServerSetup->setText("Downloading center, please wait ...");
-    QString request = "REQUEST " + oqFileName.simplified();
-    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state05);
 
-    ui->lblServerSetup->setText("Building, please wait ...");
-    webSocket->sendBinaryMessage(request.toStdString().c_str());
+    if (QFileInfo::exists(WFS_NAME + oqFileName.simplified() )
+            && QFileInfo(WFS_NAME + oqFileName.simplified()).isFile()){
+        fillThumbnails();
+        //Unlocking main screen....
+        ui->lytCentral->setEnabled(true);
+        ui->lblServerSetup->setText("CBIR is ready!");
+    } else {
+        QString request = "REQUEST " + oqFileName.simplified();
+        connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state05);
+        ui->lblServerSetup->setText("Building, please wait ...");
+        webSocket->sendBinaryMessage(request.toStdString().c_str());
+    }
 }
 
 void OberonViewer::state05(QByteArray message){
@@ -372,7 +383,6 @@ void OberonViewer::state05(QByteArray message){
     }
 
     fillThumbnails();
-
     //Unlocking main screen....
     ui->lytCentral->setEnabled(true);
     ui->lblServerSetup->setText("CBIR is ready!");
@@ -418,6 +428,7 @@ void OberonViewer::loadThumbnailsRight(MedicalImageTable tempSet){
 
     posId = tempSet.locateImageID();
     posImg = tempSet.locateImageFilename();
+
 
     //Delete thumbs inside the gridlayout
     for (size_t x = 0; x < thumbsImagesRight.size(); x++){
@@ -859,6 +870,9 @@ OberonViewer::~OberonViewer(){
         }
     }
     mapOidToNames.clear();
+    if (diagnosis != nullptr){
+        delete (diagnosis);
+    }
 
     delete (ui);
 }
@@ -889,9 +903,27 @@ void OberonViewer::on_btnZoomIn_clicked(){
 
 void OberonViewer::on_btnExit_clicked(){
 
-    this->close();
+    if (userId != -1){
+
+        ui->lytCentral->setEnabled(false);
+        Image *currentImage = Util::openImage(oqFileName);
+        if (diagnosis != nullptr){
+            delete (diagnosis);
+        }
+        diagnosis = new FormDiagnosis(*currentImage, oqId, tableName, "origin: CBIR_exit", webSocket, userId);
+        connect(diagnosis, &FormDiagnosis::finished, this, &OberonViewer::state10);
+        delete (currentImage);
+        diagnosis->showFullScreen();
+    } else {
+        ui->lblServerSetup->setText("Reports are not allowed in this mode (provenance-disabled)!");
+    }
 }
 
+void OberonViewer::state10(){
+
+    disconnect(diagnosis, &FormDiagnosis::finished, this, &OberonViewer::state10);
+    this->close();
+}
 
 void OberonViewer::on_btnZoomOut_clicked(){
 
@@ -942,33 +974,57 @@ Image* OberonViewer::windowing(int width, int center){
 
     Image *aux = (Image*) currentImage->clone();
 
-    int32_t numBins = (int32_t) pow(2, aux->getBitsPerPixel());
-    float grayScale[numBins];
+// @New imp (below) is way more efficient...
+//    int32_t numBins = (int32_t) pow(2, aux->getBitsPerPixel());
+//    float grayScale[numBins];
 
-    int32_t lowestVisibleValue = (center - ( (double) width/ (double) 2.0));
-    int32_t highestVisibleValue = (center + ( (double) width/ (double) 2.0));
+//    int32_t lowestVisibleValue = (center - ( (double) width/ (double) 2.0));
+//    int32_t highestVisibleValue = (center + ( (double) width/ (double) 2.0));
 
-    for (int32_t x = 0; x < numBins; x++) {
-        if (x <=  lowestVisibleValue){
-            grayScale[x] = lowestVisibleValue;
-        } else {
-            if (x >= highestVisibleValue){
-                grayScale[x] = highestVisibleValue;
-            } else {
-                grayScale[x] = ((x - (center - 0.5)) / (width - 1) + 0.5) * (highestVisibleValue - lowestVisibleValue) + lowestVisibleValue;
-            }
-        }
-    }
+//    for (int32_t x = 0; x < numBins; x++) {
+//        if (x <=  lowestVisibleValue){
+//            grayScale[x] = lowestVisibleValue;
+//        } else {
+//            if (x >= highestVisibleValue){
+//                grayScale[x] = highestVisibleValue;
+//            } else {
+//                grayScale[x] = ((x - (center - 0.5)) / (width - 1) + 0.5) * (highestVisibleValue - lowestVisibleValue) + lowestVisibleValue;
+//            }
+//        }
+//    }
+//    aux->deletePixelMatrix();
+//    aux->createPixelMatrix(currentImage->getWidth(), currentImage->getHeight());
+//    for (size_t x = 0; x < aux->getWidth(); x++){
+//        for (size_t y = 0; y < aux->getHeight(); y++){
+//            Pixel *p;
+//                if (currentImage->getPixel(x, y).getGrayPixelValue() == 4095){
+//                    p =  new Pixel(currentImage->getPixel(x, y).getGrayPixelValue());
+//                } else {
+//                    p = new Pixel(grayScale[(uint32_t) currentImage->getPixel(x, y).getGrayPixelValue()]);
+//                }
+//            aux->setPixel(x, y, *p);
+//            delete (p);
+//        }
+//    }
+
     aux->deletePixelMatrix();
     aux->createPixelMatrix(currentImage->getWidth(), currentImage->getHeight());
+
+    uint16_t n = 4095;
+    double w = width - 1.0;
+    double c = center - 0.5;
 
     for (size_t x = 0; x < aux->getWidth(); x++){
         for (size_t y = 0; y < aux->getHeight(); y++){
             Pixel *p;
-            if (currentImage->getPixel(x, y).getGrayPixelValue() == 4095){
-                p =  new Pixel(currentImage->getPixel(x, y).getGrayPixelValue());
+            if (currentImage->getPixel(x, y).getGrayPixelValue() <= c - 0.5*w){
+                p =  new Pixel(0);
             } else {
-                p = new Pixel(grayScale[(uint32_t) currentImage->getPixel(x, y).getGrayPixelValue()]);
+                if (currentImage->getPixel(x, y).getGrayPixelValue() > c + 0.5*w){
+                    p =  new Pixel(n);
+                } else {
+                    p =  new Pixel( (((currentImage->getPixel(x, y).getGrayPixelValue() - c)/w + 0.5) * (n)) );
+                }
             }
             aux->setPixel(x, y, *p);
             delete (p);
@@ -1132,6 +1188,26 @@ void OberonViewer::on_btnFeedback_clicked(){
         ui->lblServerSetup->setText("Invalid search parameters!");
         return;
     }
+
+    if (userId != -1){
+
+        ui->lytCentral->setEnabled(false);
+        Image *cImage = Util::openImage(oqFileName);
+        if (diagnosis != nullptr){
+            delete (diagnosis);
+        }
+        diagnosis = new FormDiagnosis(*cImage, oqId, tableName, "origin: Relevance_Feedback_Request", webSocket, userId);
+        connect(diagnosis, &FormDiagnosis::finished, this, &OberonViewer::state09);
+        delete (cImage);
+        diagnosis->showFullScreen();
+    } else {
+        ui->lblServerSetup->setText("Reports are not allowed in this mode (provenance-disabled)!");
+    }
+}
+
+void OberonViewer::state09(){
+
+    disconnect(diagnosis, &FormDiagnosis::finished, this, &OberonViewer::state09);
 
     std::vector<uint32_t> relevants;
     QString tblName, condition, sqlQuery;
@@ -1312,7 +1388,6 @@ void OberonViewer::state06(QByteArray message){
     queryT.addOrderByAttribute(tblName + ".Id");
 
 
-
     bufferQuery = queryT.generateQuery();
     connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state07);
     webSocket->sendBinaryMessage(Util::buildProvenanceInsert(userId, oqId, tableName, "relevance feedback", bufferQuery, obsProvenance).toStdString().c_str());
@@ -1345,7 +1420,7 @@ void OberonViewer::state08(QByteArray message){
         delete (currentImage);
         queryImage = nullptr;
         currentImage = nullptr;
-    }else{
+    } else {
         if (queryImage != nullptr){
             delete queryImage;
             queryImage = nullptr;
@@ -1371,10 +1446,16 @@ void OberonViewer::on_cbxWindowing_currentIndexChanged(int index){
 void OberonViewer::on_btnDiagnosis_clicked(){
 
     if (userId != -1){
-        FormDiagnosis *diagnosis = new FormDiagnosis(*currentImage, oqId, tableName, webSocket, userId);
+        FormDiagnosis *diagnosis = new FormDiagnosis(*currentImage, oqId, tableName, "origin: Report_after_CBIR", webSocket, userId);
         diagnosis->showFullScreen();
     } else {
         ui->lblServerSetup->setText("Reports are not allowed in this mode (provenance-disabled)!");
     }
+}
+
+
+void OberonViewer::on_btnPACS_clicked(){
+
+    QDesktopServices::openUrl(QUrl("https://www.dicomlibrary.com?study=" + link, QUrl::TolerantMode));
 }
 
