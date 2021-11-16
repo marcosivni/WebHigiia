@@ -3,6 +3,7 @@
 
 //Qt includes
 #include <QStringList>
+#include <QDebug>
 
 //Higiia includes
 #include <Util.h>

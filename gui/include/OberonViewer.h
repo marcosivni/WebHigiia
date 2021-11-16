@@ -83,6 +83,9 @@ class OberonViewer : public QMainWindow { Q_OBJECT
         int32_t oqId, userId;
         QByteArray bufferRSet;
         QString bufferQuery, obsProvenance;
+        FormDiagnosis *diagnosis;
+        QString link;
+        uint16_t kBridge;
 
     private:
         //Auxiliary methods for loading images into the file system
@@ -123,6 +126,8 @@ class OberonViewer : public QMainWindow { Q_OBJECT
         void state06(QByteArray message);
         void state07(QByteArray message);
         void state08(QByteArray message);
+        void state09();
+        void state10();
 
 
         //Slots for user-interaction
@@ -147,6 +152,7 @@ class OberonViewer : public QMainWindow { Q_OBJECT
         void on_sliderWidth_sliderReleased();
         void on_cbxWindowing_currentIndexChanged(int index);
         void on_btnDiagnosis_clicked();
+        void on_btnPACS_clicked();
 
                                       public:
         explicit OberonViewer(bool vTable,
@@ -164,6 +170,7 @@ class OberonViewer : public QMainWindow { Q_OBJECT
                               QWebSocket *webSocket = nullptr,
                               int32_t oqId = -1,
                               int32_t userId = -1,
+                              QString link = "",
                               QWidget *parent = 0);
 		~OberonViewer();
 };

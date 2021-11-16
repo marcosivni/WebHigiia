@@ -47,7 +47,7 @@ QueryParameters::QueryParameters(int32_t studyId, QString tableName, QString ima
     ui->lblServerSetup->setText("Requesting, please wait ...");
 
 
-    if (QFileInfo::exists(imageFile) && QFileInfo(imageFile).isFile()){
+    if (QFileInfo::exists("fs/" +imageFile) && QFileInfo("fs/" + imageFile).isFile()){
         //Load image
         Image *img = Util::openThumbnail(filename);
         if(img != nullptr){
@@ -84,7 +84,7 @@ void QueryParameters::lockWidgets(){
     ui->btnAnalytics->setEnabled(false);
     ui->btnClose->setEnabled(false);
     ui->btnNewSearchParameter->setEnabled(false);
-    ui->btnPACS->setEnabled(false);
+    ui->btnDiagnosis->setEnabled(false);
     ui->btnViewStudy->setEnabled(false);
 }
 
@@ -105,7 +105,7 @@ void QueryParameters::unlockWidgets(){
     ui->btnAnalytics->setEnabled(true);
     ui->btnClose->setEnabled(true);
     ui->btnNewSearchParameter->setEnabled(true);
-    ui->btnPACS->setEnabled(true);
+    ui->btnDiagnosis->setEnabled(true);
     ui->btnViewStudy->setEnabled(true);
 }
 
@@ -115,7 +115,6 @@ void QueryParameters::unlockWidgets(){
 */
 QueryParameters::~QueryParameters(){
 
-    Util::removeDirectoryAndContent();
     delete ui;
 }
 
@@ -351,7 +350,7 @@ void QueryParameters::state06(QByteArray message){
     if (userId != -1){
         ui->lblServerSetup->setText("Saving provenance, please wait ...");
         connect(webSocket, &QWebSocket::binaryMessageReceived, this, &QueryParameters::state09);
-        webSocket->sendBinaryMessage(Util::buildProvenanceInsert(userId, studyId, tableName.split("_").last(), "search", QString(message), provQuery).toStdString().c_str());
+        webSocket->sendBinaryMessage(Util::buildProvenanceInsert(userId, studyId, tableName.split("_").last(), "search", provQuery, "NONE").toStdString().c_str());
     } else {
         state10(bufferRSet);
     }
@@ -384,6 +383,7 @@ void QueryParameters::state10(QByteArray message){
                                                       webSocket,
                                                       studyId,
                                                       userId,
+                                                      "",
                                                       nullptr);
         oberonViewer->showFullScreen();
     } else {
@@ -515,7 +515,7 @@ void QueryParameters::state08(QByteArray message){
     if (userId != -1){
         ui->lblServerSetup->setText("Saving provenance, please wait...");
         connect(webSocket, &QWebSocket::binaryMessageReceived, this, &QueryParameters::state11);
-        webSocket->sendBinaryMessage(Util::buildProvenanceInsert(userId, studyId, tableName.split("_").last(), "analytics", QString(message), provQuery).toStdString().c_str());
+        webSocket->sendBinaryMessage(Util::buildProvenanceInsert(userId, studyId, tableName.split("_").last(), "analytics", provQuery, "NONE").toStdString().c_str());
     } else {
         state12(bufferRSet);
     }
@@ -534,6 +534,8 @@ void QueryParameters::state12(QByteArray message){
 
     MedicalImageTable rSet(Util::toStringList(message.split('\n')));
 
+    rSet.print();
+
     if (rSet.size()){
         Analytics *analyticsViewer = new Analytics(tableName.split("_").last(),
                                                    filename,
@@ -546,6 +548,7 @@ void QueryParameters::state12(QByteArray message){
                                                    webSocket,
                                                    studyId,
                                                    userId,
+                                                   "",
                                                    nullptr);
         analyticsViewer->showFullScreen();
     } else {
@@ -557,5 +560,18 @@ void QueryParameters::state12(QByteArray message){
 
     //Unlocking widgets...
     unlockWidgets();
+}
+
+
+void QueryParameters::on_btnDiagnosis_clicked(){
+
+    if (userId != -1){
+        Image *currentImage = Util::openImage(filename);
+        FormDiagnosis *diagnosis = new FormDiagnosis(*currentImage, studyId, tableName.split("_").last(), "origin: Query_Parameters", webSocket, userId);
+        diagnosis->showFullScreen();
+        delete (currentImage);
+    } else {
+        ui->lblServerSetup->setText("Reports are not allowed in this mode (provenance-disabled)!");
+    }
 }
 

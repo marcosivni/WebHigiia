@@ -192,7 +192,7 @@ QGroupBox {
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="btnPACS">
+        <widget class="QPushButton" name="btnDiagnosis">
          <property name="minimumSize">
           <size>
            <width>84</width>
@@ -216,7 +216,11 @@ QGroupBox {
           <string notr="true">font-size: 30px;</string>
          </property>
          <property name="text">
-          <string>PACS</string>
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="../../icons.qrc">
+           <normaloff>:/icons/icoWriteNewDiagnosis.png</normaloff>:/icons/icoWriteNewDiagnosis.png</iconset>
          </property>
          <property name="iconSize">
           <size>

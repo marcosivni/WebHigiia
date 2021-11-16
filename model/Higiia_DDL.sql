@@ -24,6 +24,7 @@ CREATE TABLE Pool (
     userId INTEGER,
     imageId INTEGER,
     tableName VARCHAR (45),
+    searchType INTEGER,
     PRIMARY KEY (userId, imageId, tableName)
 );
 
@@ -42,3 +43,10 @@ CREATE TABLE Caption (
     caption VARCHAR (256),
     PRIMARY KEY (tableN, attribute, valueN)
 );
+
+
+
+searchType
+1- Similarity 10
+2- BRIDGE 10, 10
+3- Analytics 20, 20 
