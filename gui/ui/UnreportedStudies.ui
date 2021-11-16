@@ -30,7 +30,9 @@
     <normaloff>:/icons/favicon.ico</normaloff>:/icons/favicon.ico</iconset>
   </property>
   <property name="styleSheet">
-   <string notr="true">
+   <string notr="true">QWidget {
+	font-size: 9pt;
+}
 
  QLineEdit:!enabled {
      color: black;
@@ -323,10 +325,15 @@ QFrame{
             </property>
             <property name="font">
              <font>
-              <pointsize>20</pointsize>
+              <pointsize>19</pointsize>
               <weight>75</weight>
               <bold>true</bold>
              </font>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">QWidget {
+	font-size: 19pt;
+}</string>
             </property>
             <property name="text">
              <string>PACS</string>

@@ -518,7 +518,7 @@ void UnreportedStudies::state08(QByteArray message){
         }
 
         if (posT > 2){
-            condition += " BRIDGE 15";
+            condition += " BRIDGE 10";
         }
 
         queryT.addWhereAttribute(condition);
@@ -553,7 +553,11 @@ void UnreportedStudies::state09(QByteArray message){
                 if (posT == 1){
                     searchType = Util::SIMILARITY_SEARCH;
                 } else {
-                    searchType = Util::BRIDGE_SEARCH;
+                    if (posT == 2){
+                        searchType = Util::DIVERSITY_SEARCH;
+                    } else {
+                        searchType = Util::BRIDGE_SEARCH;
+                    }
                 }
 
                 OberonViewer *oberonViewer = new OberonViewer(false,

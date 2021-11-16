@@ -40,7 +40,7 @@ OberonViewer::OberonViewer(bool vTable,
     this->link = link;
 
     ui->txtKnn->setText(QString::number(k));
-    ui->txtBridge->setText(QString::number(kBridge));
+    this->kBridge = kBridge;
 
     currentImage = nullptr;
     queryImage = nullptr;
@@ -1382,7 +1382,7 @@ void OberonViewer::state06(QByteArray message){
     condition += queryObjectValue;
     condition += " BY "+ metricName + " STOP AFTER " + ui->txtKnn->text();
     if (searchType == Util::BRIDGE_SEARCH){
-        condition += " BRIDGE " + ui->txtBridge->text();
+        condition += " BRIDGE " + QString::number(kBridge);
     }
     queryT.addWhereAttribute(condition);
     queryT.addOrderByAttribute(tblName + ".Id");

@@ -85,6 +85,7 @@ class OberonViewer : public QMainWindow { Q_OBJECT
         QString bufferQuery, obsProvenance;
         FormDiagnosis *diagnosis;
         QString link;
+        uint16_t kBridge;
 
     private:
         //Auxiliary methods for loading images into the file system
