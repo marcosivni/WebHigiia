@@ -427,7 +427,7 @@ QTabBar::tab:only-one {
               <bool>false</bool>
              </property>
              <property name="text">
-              <string>143.107.141.208</string>
+              <string>0</string>
              </property>
             </widget>
            </item>
