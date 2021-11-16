@@ -1,15 +1,12 @@
 #include "Login.h"
 #include "ui_Login.h"
 
-/**
-* Constructor.
-*
-* @param parent Value here is NULL (first system screen - no parent).
-*/
 Login::Login(QWebSocket *webSocket, QWidget *parent) : QMainWindow(parent), ui(new Ui::Login) {
 
     ui->setupUi(this);
     QDesktopWidget *desktop = QApplication::desktop();
+
+    this->setAttribute(Qt::WA_DeleteOnClose);
 
     uint16_t screenWidth, width;
     uint16_t screenHeight, height;
@@ -33,21 +30,12 @@ Login::Login(QWebSocket *webSocket, QWidget *parent) : QMainWindow(parent), ui(n
     ui->txtUser->setFocus();
 }
 
-/**
-* Destructor.
-*
-*/
 Login::~Login() {
 
     Util::removeDirectoryAndContent();
     delete ui;
 }
 
-/**
-* This method manages the event change.
-*
-* @param e The captured QEvent
-*/
 void Login::changeEvent(QEvent *e) {
 
     QMainWindow::changeEvent(e);
@@ -87,7 +75,6 @@ void Login::state01(){
         ui->lblServerSetup->setText("Server is unavailable!");
         ui->txtHostname->setEnabled(true);
         ui->txtPort->setEnabled(true);
-        ui->chbProvenance->setEnabled(true);
         ui->txtUser->clear();
         ui->txtPass->clear();
         ui->txtUser->setFocus();
@@ -99,7 +86,6 @@ void Login::state01(){
             //Locking widgets
             ui->btnLogin->setEnabled(false);
             ui->btnExit->setEnabled(false);
-            ui->chbProvenance->setEnabled(true);
 
             //Create query -- Lazy auth until QSsl (client side) gets full support on Qt WASM
             SirenSQLQuery buildLogin;
@@ -124,7 +110,6 @@ void Login::on_btnSetup_clicked(){
 
     ui->txtHostname->setEnabled(true);
     ui->txtPort->setEnabled(true);
-    ui->chbProvenance->setEnabled(true);
 }
 
 
@@ -151,11 +136,12 @@ void Login::state02(QByteArray message){
         ui->lblServerSetup->setText("Connected to the Server!");
 
         if (idTable.size()){
-            UnreportedStudies *unreportedStudies = new UnreportedStudies(webSocket, idTable.fetchByColumnId(0, 0).toInt(), ui->chbProvenance->isChecked(), nullptr);
+            UnreportedStudies *unreportedStudies = new UnreportedStudies(webSocket, idTable.fetchByColumnId(0, 0).toInt(), nullptr);
             unreportedStudies->show();
         } else {
             ui->lblServerSetup->setText("Invalid user or password!");
         }
+
     }
 }
 

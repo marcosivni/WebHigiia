@@ -1,12 +1,7 @@
 #include "UnreportedStudies.h"
 #include "ui_UnreportedStudies.h"
 
-/**
-* Constructor.
-*
-* @param parent The parent widget. The default value is NULL.
-*/
-UnreportedStudies::UnreportedStudies(QWebSocket *webSocket, int userId, bool provenance, QWidget *parent) :
+UnreportedStudies::UnreportedStudies(QWebSocket *webSocket, const int userId, QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::UnreportedStudies){
 
@@ -21,23 +16,20 @@ UnreportedStudies::UnreportedStudies(QWebSocket *webSocket, int userId, bool pro
     uint16_t x, y;
     QSize windowSize;
 
-    screenWidth = desktop->width(); // get width of screen
-    screenHeight = desktop->height(); // get height of screen
+    screenWidth = desktop->width();
+    screenHeight = desktop->height();
 
-    windowSize = size(); // size of our application window
+    windowSize = size();
     width = windowSize.width();
     height = windowSize.height();
 
     x = (screenWidth - width) / 2;
     y = (screenHeight - height) / 2;
 
-    // move window to desired coordinates
     move ( x, y );
 
     //Keep websocket connection
     this->webSocket = webSocket;
-    this->provenance = provenance;
-    this->diagnosis = nullptr;
     ui->txtSearchPatient->setFocus();
 
     //Load studies data
@@ -46,14 +38,11 @@ UnreportedStudies::UnreportedStudies(QWebSocket *webSocket, int userId, bool pro
 
 UnreportedStudies::~UnreportedStudies(){
 
-    if (diagnosis != nullptr){
-        delete (diagnosis);
-    }
     delete ui;
 }
 
 
-void UnreportedStudies::loadStudyTable(int userId){
+void UnreportedStudies::loadStudyTable(const int userId){
 
     this->userId = QString::number(userId);
     ui->lblServerSetup->setText("Fetching user pool, please wait...");
@@ -64,12 +53,7 @@ void UnreportedStudies::loadStudyTable(int userId){
     buildPool.addWhereAttribute("userId = " + QString::number(userId));
 
     //Lock screen
-    ui->txtSearchPatient->setEnabled(false);
-    ui->btnBack->setEnabled(false);
-    ui->btnPACS->setEnabled(false);
-    ui->btnNext->setEnabled(false);
-    ui->btnViewStudy->setEnabled(false);
-    ui->tblInfo->setEnabled(false);
+    ui->centralwidget->setEnabled(false);
 
     //Blocking call - State Machine
     connect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state01);
@@ -106,7 +90,6 @@ void UnreportedStudies::populateStudyTable(MedicalImageTable records){
             newItem->setToolTip(records.fetchByColumn(row, "Id") + ","
                                 + records.fetchByColumn(row, "TableName") + ","
                                 + records.fetchByColumn(row, "Filename") + ","
-                                + records.fetchByColumn(row, "searchType") + ","
                                 + records.fetchByColumn(row, "url"));
             newItem->setFlags(newItem->flags() & (~Qt::ItemIsEditable));
             ui->tblInfo->setItem(row, column, newItem);
@@ -114,17 +97,12 @@ void UnreportedStudies::populateStudyTable(MedicalImageTable records){
     }
 
     //Unlock screen
-    ui->txtSearchPatient->setEnabled(true);
-    ui->btnBack->setEnabled(true);
-    ui->btnPACS->setEnabled(true);
-    ui->btnNext->setEnabled(true);
-    ui->btnViewStudy->setEnabled(true);
-    ui->tblInfo->setEnabled(true);
+    ui->centralwidget->setEnabled(true);
 
     ui->tblInfo->resizeColumnsToContents();
 }
 
-void UnreportedStudies::populateStudyTable(std::vector<int> rowIds){
+void UnreportedStudies::populateStudyTable(const std::vector<int> rowIds){
 
     //Clear rows
     while(ui->tblInfo->rowCount() > 0){
@@ -145,7 +123,6 @@ void UnreportedStudies::populateStudyTable(std::vector<int> rowIds){
             newItem->setToolTip(subsetRecords.fetchByColumn(row, "Id") + ","
                                 + subsetRecords.fetchByColumn(row, "TableName") + ","
                                 + subsetRecords.fetchByColumn(row, "Filename") + ","
-                                + subsetRecords.fetchByColumn(row, "searchType") + ","
                                 + subsetRecords.fetchByColumn(row, "url"));
             newItem->setFlags(newItem->flags() & (~Qt::ItemIsEditable));
             ui->tblInfo->setItem(row, column, newItem);
@@ -154,11 +131,6 @@ void UnreportedStudies::populateStudyTable(std::vector<int> rowIds){
     ui->tblInfo->resizeColumnsToContents();
 }
 
-/**
-* This method is responsible to manage the event change.
-*
-* @param e The captured QEvent.
-*/
 void UnreportedStudies::changeEvent(QEvent *e){
 
     QMainWindow::changeEvent(e);
@@ -171,10 +143,6 @@ void UnreportedStudies::changeEvent(QEvent *e){
     }
 }
 
-/**
-* Increments the selected row by 1 on the qTableWidget.
-*
-*/
 void UnreportedStudies::on_btnNext_clicked(){
 
     if ((ui->tblInfo->currentRow() + 1) < (ui->tblInfo->rowCount())){
@@ -182,10 +150,6 @@ void UnreportedStudies::on_btnNext_clicked(){
     }
 }
 
-/**
-* Decrements the selected row by 1 on the qTableWidget.
-*
-*/
 void UnreportedStudies::on_btnBack_clicked(){
 
     if ((ui->tblInfo->currentRow() - 1) >= 0){
@@ -193,20 +157,11 @@ void UnreportedStudies::on_btnBack_clicked(){
     }
 }
 
-/**
-* Finishes the application.
-*
-*/
 void UnreportedStudies::on_btnClose_clicked(){
 
     this->close();
 }
 
-/**
-* Employs the mask arg1 to filter patients by name.
-*
-* @param arg1 The search name
-*/
 void UnreportedStudies::on_txtSearchPatient_textChanged(const QString &arg1){
 
     std::vector<int> rowIds;
@@ -219,10 +174,6 @@ void UnreportedStudies::on_txtSearchPatient_textChanged(const QString &arg1){
     populateStudyTable(rowIds);
 }
 
-/**
-* Shows the QueryParameters screen with the selected patient data.
-* LANDMARK
-*/
 void UnreportedStudies::on_btnViewStudy_clicked(){
 
     QModelIndexList selectedList = ui->tblInfo->selectionModel()->selectedRows();
@@ -233,34 +184,13 @@ void UnreportedStudies::on_btnViewStudy_clicked(){
             QTableWidgetItem *item = ui->tblInfo->item(pos, 0);
             QStringList parameters = item->toolTip().split(",");
 
-            if (records.fetchCaption().indexOf(QRegularExpression("\\s+searchType")) != -1){
-
-                ui->centralwidget->setEnabled(false);
-                //Blocking call - State Machine
-                if (QFileInfo::exists(WFS_NAME + parameters.at(2).simplified()) && QFileInfo(WFS_NAME + parameters.at(2).simplified()).isFile()){
-                    state05();
-                } else {
-                    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state04);
-                    webSocket->sendBinaryMessage(("REQUEST " + parameters.at(2).simplified()).toStdString().c_str());
-                }
-
+            ui->centralwidget->setEnabled(false);
+            //Blocking call - State Machine
+            if (QFileInfo::exists(WFS_NAME + parameters.at(2).simplified()) && QFileInfo(WFS_NAME + parameters.at(2).simplified()).isFile()){
+                state05();
             } else {
-
-                QueryParameters *qp = nullptr;
-                if (provenance){
-                    qp = new QueryParameters(parameters.at(0).toInt(),
-                                             parameters.at(1).simplified(),
-                                             parameters.at(2).simplified(),
-                                             webSocket,
-                                             userId.toInt(),
-                                             nullptr);
-                } else {
-                    qp = new QueryParameters(parameters.at(0).toInt(),
-                                             parameters.at(1).simplified(),
-                                             parameters.at(2).simplified(),
-                                             webSocket);
-                }
-                qp->show();
+                connect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state04);
+                webSocket->sendBinaryMessage(("REQUEST " + parameters.at(2).simplified()).toStdString().c_str());
             }
         } catch(...) {
             ui->lblServerSetup->setText("Error: Invalid patient selection.");
@@ -269,36 +199,8 @@ void UnreportedStudies::on_btnViewStudy_clicked(){
         ui->lblServerSetup->setText("Error: Please, select a line with a patient.");
     }
     ui->lblServerSetup->setText("Connected to the Server!");
-
-
-
 }
 
-
-//void UnreportedStudies::on_btnNewDiagnosis_clicked(){
-
-//    uint8_t pos = ui->tblInfo->currentRow();
-//    try{
-//        QTableWidgetItem *item = ui->tblInfo->item(pos, 0);
-//        QStringList parameters = item->toolTip().split(",");
-//        QString link = parameters.at(4).simplified();
-//        QDesktopServices::openUrl(QUrl(link, QUrl::TolerantMode));
-
-
-////        if (diagnosis != nullptr){
-////            delete (diagnosis);
-////        }
-////        diagnosis = new FormDiagnosis(*currentImage, parameters.at(0).toInt(),
-////                                                     parameters.at(1).simplified(),
-////                                                     "origin: Initial_Diagnosis",
-////                                                     webSocket,
-////                                                     userId.toInt());
-////        diagnosis->showFullScreen();
-////        delete (currentImage);
-//    } catch(...) {
-//        ui->lblServerSetup->setText("Error: Invalid patient selection.");
-//    }
-//}
 
 
 void UnreportedStudies::state01(QByteArray message){
@@ -400,8 +302,6 @@ void UnreportedStudies::state06(QByteArray message){
     disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state06);
     ui->lblServerSetup->setText("Building query, please wait...");
 
-    uint8_t pos = ui->tblInfo->currentRow();
-
     //Query object
     ResultTable oqTable(Util::toStringList(message.split('\n')));
     if (!oqTable.size()){
@@ -410,29 +310,11 @@ void UnreportedStudies::state06(QByteArray message){
     }
     oq.unserializeFromString(FeatureVector::fromBase64(oqTable.fetchByColumnId(0, 0).toStdString()));
 
-    try{
-        QTableWidgetItem *item = ui->tblInfo->item(pos, 0);
-        QStringList parameters = item->toolTip().split(",");
-        Image *currentImage = Util::openImage(parameters.at(2).simplified());
-        if (diagnosis != nullptr){
-            delete (diagnosis);
-        }
-        diagnosis = new FormDiagnosis(*currentImage, parameters.at(0).toInt(),
-                                                     parameters.at(1).simplified(),
-                                                     "origin: Initial_Diagnosis",
-                                                     webSocket,
-                                                     userId.toInt());
-        connect(diagnosis, &FormDiagnosis::finished, this, &UnreportedStudies::state07);
-        diagnosis->showFullScreen();
-        delete (currentImage);
-    } catch(...) {
-        ui->lblServerSetup->setText("Error: Invalid patient selection.");
-    }
+    state07();
 }
 
 void UnreportedStudies::state07(){
 
-    disconnect(diagnosis, &FormDiagnosis::finished, this, &UnreportedStudies::state07);
     ui->lblServerSetup->setText("Fetching scope, please wait ...");
     uint8_t pos = ui->tblInfo->currentRow();
 
@@ -465,7 +347,6 @@ void UnreportedStudies::state08(QByteArray message){
         QString tblName = parameters.at(1).simplified();
         QString queryObjectValue, condition;
         SirenSQLQuery queryT;
-        int posT = parameters.at(3).simplified().toInt();
 
         queryObjectValue = " { ";
         for (size_t x = 0; x < oq.size(); x++){
@@ -496,32 +377,13 @@ void UnreportedStudies::state08(QByteArray message){
 
         //Selection
         condition = tblName +".PcaF";
-        if (posT == 1){
-            condition += " NEAR ";
-        } else {
-            if (posT == 2){
-                condition += " DIVERSITY NEAR ";
-            } else {
-                condition += " DIVERSIFIED NEAR ";
-            }
-        }
-
+        condition += " DIVERSIFIED NEAR ";
         condition += queryObjectValue;
-        if (posT > 2){
-            condition += " STOP AFTER 35";
-        } else {
-            if (posT > 1){
-                condition += " STOP AFTER 10";
-            } else {
-                condition += " STOP AFTER 15";
-            }
-        }
-
-        if (posT > 2){
-            condition += " BRIDGE 10";
-        }
+        condition += " STOP AFTER 35";
+        condition += " BRIDGE 10";
 
         queryT.addWhereAttribute(condition);
+
         //Order by
         queryT.addOrderByAttribute(tblName + ".Id");
 
@@ -544,65 +406,25 @@ void UnreportedStudies::state09(QByteArray message){
     try{
         QTableWidgetItem *item = ui->tblInfo->item(pos, 0);
         QStringList parameters = item->toolTip().split(",");
-        int posT = parameters.at(3).simplified().toInt();
 
-        if (posT <= 2){
-            //abrir Oberon
-            if (rSet.size()){
-                Util::SEARCH_TYPE searchType;
-                if (posT == 1){
-                    searchType = Util::SIMILARITY_SEARCH;
-                } else {
-                    if (posT == 2){
-                        searchType = Util::DIVERSITY_SEARCH;
-                    } else {
-                        searchType = Util::BRIDGE_SEARCH;
-                    }
-                }
-
-                OberonViewer *oberonViewer = new OberonViewer(false,
-                                                              scope,
-                                                              parameters.at(1).simplified(),
-                                                              parameters.at(2).simplified(),
-                                                              "PcaF",
-                                                              oq,
-                                                              rSet,
-                                                              searchType,
-                                                              10,
-                                                              10,
-                                                              parameters.at(1).simplified(),
-                                                              "L2",
-                                                              webSocket,
-                                                              parameters.at(0).toInt(),
-                                                              userId.toInt(),
-                                                              parameters.at(4),
-                                                              nullptr);
-                scope.clear();
-                oberonViewer->showFullScreen();
-            } else {
-                ui->lblServerSetup->setText("Empty result set!");
-            }
+        if (rSet.size()){
+            Analytics *analyticsViewer = new Analytics(parameters.at(1).simplified(),
+                                                       parameters.at(2).simplified(),
+                                                       oq,
+                                                       "PcaF",
+                                                       "L2",
+                                                       rSet,
+                                                       false,
+                                                       parameters.at(1).simplified(),
+                                                       webSocket,
+                                                       parameters.at(0).toInt(),
+                                                       userId.toInt(),
+                                                       parameters.at(3),
+                                                       nullptr);
+            scope.clear();
+            analyticsViewer->showFullScreen();
         } else {
-            //abrir analytics
-            if (rSet.size()){
-                Analytics *analyticsViewer = new Analytics(parameters.at(1).simplified(),
-                                                           parameters.at(2).simplified(),
-                                                           oq,
-                                                           "PcaF",
-                                                           "L2",
-                                                           rSet,
-                                                           false,
-                                                           parameters.at(1).simplified(),
-                                                           webSocket,
-                                                           parameters.at(0).toInt(),
-                                                           userId.toInt(),
-                                                           parameters.at(4),
-                                                           nullptr);
-                scope.clear();
-                analyticsViewer->showFullScreen();
-            } else {
-                ui->lblServerSetup->setText("Empty result set!");
-            }
+            ui->lblServerSetup->setText("Empty result set!");
         }
     } catch(...) {
         ui->lblServerSetup->setText("Error: Invalid patient selection.");
@@ -616,9 +438,8 @@ void UnreportedStudies::on_btnPACS_clicked(){
     try{
         QTableWidgetItem *item = ui->tblInfo->item(pos, 0);
         QStringList parameters = item->toolTip().split(",");
-        QString link = parameters.at(4).simplified();
+        QString link = parameters.at(3).simplified();
         QDesktopServices::openUrl(QUrl("https://www.dicomlibrary.com?study=" + link, QUrl::TolerantMode));
-
     } catch(...) {
         ui->lblServerSetup->setText("Error: Invalid patient selection.");
     }

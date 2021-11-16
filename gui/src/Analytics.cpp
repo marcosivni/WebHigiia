@@ -16,7 +16,6 @@ Analytics::Analytics(QString tableName,
 
     ui->setupUi(this);
 
-    /* Delete this object when the form is closed */
     this->setAttribute(Qt::WA_DeleteOnClose);
 
     QDesktopWidget *desktop = QApplication::desktop();
@@ -26,17 +25,16 @@ Analytics::Analytics(QString tableName,
     uint16_t x, y;
     QSize windowSize;
 
-    screenWidth = desktop->width(); // get width of screen
-    screenHeight = desktop->height(); // get height of screen
+    screenWidth = desktop->width();
+    screenHeight = desktop->height();
 
-    windowSize = size(); // size of our application window
+    windowSize = size();
     width = windowSize.width();
     height = windowSize.height();
 
     x = (screenWidth - width) / 2;
     y = (screenHeight - height) / 2;
 
-    // move window to center
     move ( x, y );
 
     this->tableName = tableName;
@@ -50,7 +48,6 @@ Analytics::Analytics(QString tableName,
     this->vTableName = vTableName;
     this->oqId = oqId;
     this->userId = userId;
-    this->diagnosis = nullptr;
     this->link = link;
 
     seriesByTarget = nullptr;
@@ -125,10 +122,6 @@ Analytics::~Analytics(){
     mapInfluencedRows.clear();
     mapPointToRowId.clear();
     dataset2D.clear();
-
-    if (diagnosis != nullptr){
-        delete (diagnosis);
-    }
 
     delete ui;
 }
@@ -818,7 +811,7 @@ QString Analytics::buildOqStats(){
     return answer;
 }
 
-QString Analytics::buildNeighborScope(MedicalImageTable tempSet, QStringList scopeList, int rowId){
+QString Analytics::buildNeighborScope(MedicalImageTable tempSet, QStringList scopeList, const int rowId){
 
     QString answer;
     std::string caption;
@@ -857,7 +850,7 @@ QString Analytics::buildNeighborScope(MedicalImageTable tempSet, QStringList sco
 /// %Elements matching visual mining target: xx.xx% (target), xx.xx (others)
 /// #Values distinct to visual mining target: {xx, xx, xx, xx}
 ///
-QString Analytics::buildNeighborStats(int rowId, double distToOq){
+QString Analytics::buildNeighborStats(const int rowId, const double distToOq){
 
     QString answer;
     QStringList nonTargetValues;
@@ -1130,29 +1123,15 @@ void Analytics::on_btnStatsOq_clicked(){
 
 void Analytics::on_btnSearchOi_clicked(){
 
-    if (userId != -1){
-        lockWidgets();
-
-        Image *currentImage = Util::openImage(oqFileName);
-        if (diagnosis != nullptr){
-            delete (diagnosis);
-        }
-        diagnosis = new FormDiagnosis(*currentImage, oqId, tableName, "origin: Query_Expansion_Analytics", webSocket, userId);
-        connect(diagnosis, &FormDiagnosis::finished, this, &Analytics::state11);
-        delete (currentImage);
-
-        diagnosis->showFullScreen();
-
-    } else {
-        ui->lblStatus->setText("Reports are not allowed in this mode (provenance-disabled)!");
-    }
+    lockWidgets();
+    state11();
 }
 
 void Analytics::state08(){
 
     disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state08);
     ui->lblStatus->setText("CBIR is ready!");
-    //scopeAtts.clear();
+
     bufferViewer->showFullScreen();
     unlockWidgets();
 }
@@ -1160,42 +1139,17 @@ void Analytics::state08(){
 
 void Analytics::on_btnClose_clicked(){
 
-    if (userId != -1){
-
-        ui->lblStatus->setEnabled(false);
-        Image *currentImage = Util::openImage(oqFileName);
-        if (diagnosis != nullptr){
-            delete (diagnosis);
-        }
-        diagnosis = new FormDiagnosis(*currentImage, oqId, tableName, "origin: Analytics_exit", webSocket, userId);
-        connect(diagnosis, &FormDiagnosis::finished, this, &Analytics::state13);
-        delete (currentImage);
-        diagnosis->showFullScreen();
-    } else {
-        ui->lblStatus->setText("Reports are not allowed in this mode (provenance-disabled)!");
-    }
+    this->close();
 }
 
 void Analytics::state13(){
 
-    disconnect(diagnosis, &FormDiagnosis::finished, this, &Analytics::state13);
-    this->close();
+    //EMPTY
 }
 
 void Analytics::on_btnSearchOq_clicked(){
 
-    if (userId != -1){
-        Image *currentImage = Util::openImage(oqFileName);
-        if (diagnosis != nullptr){
-            delete (diagnosis);
-        }
-        diagnosis = new FormDiagnosis(*currentImage, oqId, tableName, "origin: Query_CBIR_Analytics", webSocket, userId);
-        connect(diagnosis, &FormDiagnosis::finished, this, &Analytics::state10);
-        delete (currentImage);
-        diagnosis->showFullScreen();
-    } else {
-        ui->lblStatus->setText("Reports are not allowed in this mode (provenance-disabled)!");
-    }
+    state10();
 }
 
 void Analytics::state09(QByteArray message){
@@ -1258,22 +1212,11 @@ void Analytics::state07(QByteArray message){
 
 void Analytics::on_btnNewDiagnosis_clicked(){
 
-    if (userId != -1){
-        Image *currentImage = Util::openImage(oqFileName);
-        if (diagnosis != nullptr){
-            delete (diagnosis);
-        }
-        diagnosis = new FormDiagnosis(*currentImage, oqId, tableName, "origin: Report_after_Analytics", webSocket, userId);
-        delete (currentImage);
-        diagnosis->showFullScreen();
-    } else {
-        ui->lblStatus->setText("Reports are not allowed in this mode (provenance-disabled)!");
-    }
+    //EMPTY
 }
 
 void Analytics::state10(){
 
-    disconnect(diagnosis, &FormDiagnosis::finished, this, &Analytics::state10);
     ui->lblStatus->setText("Building query, please wait...");
     lockWidgets();
 
@@ -1337,8 +1280,6 @@ void Analytics::state10(){
 }
 
 void Analytics::state11(){
-
-    disconnect(diagnosis, &FormDiagnosis::finished, this, &Analytics::state11);
 
     MedicalImageTable newRSet;
     QString influencer, scopeAttributes;

@@ -34,14 +34,12 @@ class UnreportedStudies : public QMainWindow{ Q_OBJECT
         MedicalImageTable records;
         QString userId, scope;
         FeatureVector oq;
-        bool provenance;
-        FormDiagnosis *diagnosis;
 
 
     private:
-        void loadStudyTable(int userId);
+        void loadStudyTable(const int userId);
         void populateStudyTable(MedicalImageTable records);
-        void populateStudyTable(std::vector<int> rowIds);
+        void populateStudyTable(const std::vector<int> rowIds);
 
 
     private slots:
@@ -66,7 +64,7 @@ class UnreportedStudies : public QMainWindow{ Q_OBJECT
         void changeEvent(QEvent *e);
 
     public:
-        explicit UnreportedStudies(QWebSocket *webSocket, int userId, bool provenance = false, QWidget *parent = 0);
+        explicit UnreportedStudies(QWebSocket *webSocket, const int userId, QWidget *parent = 0);
         ~UnreportedStudies();
 };
 

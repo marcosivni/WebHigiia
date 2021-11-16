@@ -16,12 +16,6 @@ namespace Ui {
     class Login;
 }
 
-/**
-* This class implements the login screen and is responsible
-* to check user's data.
-*
-* @brief Implementation of Login Screen.
-*/
 class Login : public QMainWindow { Q_OBJECT
 
     private:
@@ -39,8 +33,6 @@ class Login : public QMainWindow { Q_OBJECT
     public:
         explicit Login(QWebSocket *webSocket, QWidget *parent = 0);
         ~Login();
-
-    signals:
 
     public slots:
         void state01();

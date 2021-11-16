@@ -388,29 +388,6 @@ QTabBar::tab:only-one {
            <string>Setup</string>
           </attribute>
           <layout class="QGridLayout" name="gridLayout_5">
-           <item row="2" column="0" colspan="2">
-            <widget class="QCheckBox" name="chbProvenance">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="text">
-              <string>Keep provenance log</string>
-             </property>
-             <property name="checked">
-              <bool>true</bool>
-             </property>
-             <property name="tristate">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="QLabel" name="lblHostname">
-             <property name="text">
-              <string>Hostname:</string>
-             </property>
-            </widget>
-           </item>
            <item row="1" column="1">
             <widget class="QLineEdit" name="txtPort">
              <property name="enabled">
@@ -421,31 +398,14 @@ QTabBar::tab:only-one {
              </property>
             </widget>
            </item>
-           <item row="0" column="1">
-            <widget class="QLineEdit" name="txtHostname">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="text">
-              <string>0</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="lblPort">
-             <property name="text">
-              <string>Port:</string>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="0" colspan="2">
+           <item row="3" column="0" colspan="2">
             <widget class="QPushButton" name="btnSetup">
              <property name="text">
               <string>Change Setup</string>
              </property>
             </widget>
            </item>
-           <item row="3" column="0">
+           <item row="2" column="0">
             <spacer name="verticalSpacer_4">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
@@ -457,6 +417,30 @@ QTabBar::tab:only-one {
               </size>
              </property>
             </spacer>
+           </item>
+           <item row="0" column="0">
+            <widget class="QLabel" name="lblHostname">
+             <property name="text">
+              <string>Hostname:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLineEdit" name="txtHostname">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>143.107.141.208</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="lblPort">
+             <property name="text">
+              <string>Port:</string>
+             </property>
+            </widget>
            </item>
           </layout>
          </widget>
@@ -528,7 +512,6 @@ QTabBar::tab:only-one {
   <tabstop>btnExit</tabstop>
   <tabstop>txtHostname</tabstop>
   <tabstop>txtPort</tabstop>
-  <tabstop>chbProvenance</tabstop>
   <tabstop>btnSetup</tabstop>
  </tabstops>
  <resources>

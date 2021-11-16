@@ -11,7 +11,7 @@
 #include <QFileInfo>
 #include <QDir>
 
-//Qt Chart includes - stat lin in libqt5charts5-dev (apt-get)
+//Qt Chart includes - stat lin in libqt5charts5-dev (apt)
 #include <QtCharts/QChartView>
 #include <QtCharts/QScatterSeries>
 #include <QtCharts/QLegendMarker>
@@ -46,14 +46,15 @@ class Analytics : public QMainWindow {
     Q_OBJECT
 
     private:
+        //Load data auxiliary vars
         bool vTable;
         QString tableName, oqFileName, simAttribute, metricName, vTableName;
         MedicalImageTable rSet, tempRInfset, rInfset, newRSet;
         FeatureVector oq, oqRed;
         QStringList scopeAtts;
         Util::SEARCH_TYPE searchType;
-
         int counterImgs, iteratorRSet;
+
         //Mapper rSet -> rInfSet
         QMultiMap<uint16_t, uint16_t> mapInfluencedRows;
 
@@ -72,11 +73,10 @@ class Analytics : public QMainWindow {
         //Scope caption
         ScopeCaption scopeCaption;
 
-        //Provenance info
+        //Workflow info
         int32_t oqId, userId;
         OberonViewer *bufferViewer;
         QString bufferQuery;
-        FormDiagnosis *diagnosis;
         QString link;
 
     private:
@@ -114,8 +114,8 @@ class Analytics : public QMainWindow {
 
         QString buildOqScope();
         QString buildOqStats();
-        QString buildNeighborScope(MedicalImageTable tempSet, QStringList scopeList, int rowId);
-        QString buildNeighborStats(int rowId, double distToOq);
+        QString buildNeighborScope(MedicalImageTable tempSet, QStringList scopeList, const int rowId);
+        QString buildNeighborStats(const int rowId, const double distToOq);
 
 
         FeatureVectorList pca2D();
