@@ -9,14 +9,10 @@
 #include <QPageSize>
 #include <QPagedPaintDevice>
 #include <QFileDialog>
-#include <QComboBox>
-#include <QPushButton>
 #include <QtGui>
 #include <QWebSocket>
 #include <QMultiMap>
 
-//Hermes includes
-#include <BasicArrayObject.h>
 
 //Higiia includes
 #include <QPushButtonAlter.h>
@@ -25,7 +21,6 @@
 #include <WindowingInterval.h>
 #include <MedicalImageTable.h>
 #include <SirenSqlQuery.h>
-#include <FormDiagnosis.h>
 
 namespace Ui {
     class OberonViewer;
@@ -79,13 +74,9 @@ class OberonViewer : public QMainWindow { Q_OBJECT
         QWebSocket *webSocket;
         //UI
         Ui::OberonViewer *ui;
-        //Provenance info
-        int32_t oqId, userId;
-        QByteArray bufferRSet;
-        QString bufferQuery, obsProvenance;
-        FormDiagnosis *diagnosis;
-        QString link;
-        uint16_t kBridge;
+
+        //Viewing info
+        QString link, kBridge;
 
     private:
         //Auxiliary methods for loading images into the file system
@@ -125,9 +116,6 @@ class OberonViewer : public QMainWindow { Q_OBJECT
         //State machine slots for relevance feedback cycles
         void state06(QByteArray message);
         void state07(QByteArray message);
-        void state08(QByteArray message);
-        void state09();
-        void state10();
 
 
         //Slots for user-interaction
@@ -151,10 +139,9 @@ class OberonViewer : public QMainWindow { Q_OBJECT
         void on_sliderCenter_sliderReleased();
         void on_sliderWidth_sliderReleased();
         void on_cbxWindowing_currentIndexChanged(int index);
-        void on_btnDiagnosis_clicked();
         void on_btnPACS_clicked();
 
-                                      public:
+    public:
         explicit OberonViewer(bool vTable,
                               QString scopeAttributes,
                               QString tableName,
@@ -167,10 +154,10 @@ class OberonViewer : public QMainWindow { Q_OBJECT
                               uint16_t kBridge,
                               QString vTableName,
                               QString metricName,
-                              QWebSocket *webSocket = nullptr,
-                              int32_t oqId = -1,
-                              int32_t userId = -1,
-                              QString link = "",
+                              QWebSocket *webSocket,
+                              int32_t oqId,
+                              int32_t userId,
+                              QString link,
                               QWidget *parent = 0);
 		~OberonViewer();
 };

@@ -8,8 +8,6 @@
 #include <QMainWindow>
 #include <QDesktopWidget>
 #include <QWebSocket>
-#include <QFileInfo>
-#include <QDir>
 
 //Qt Chart includes - stat lin in libqt5charts5-dev (apt)
 #include <QtCharts/QChartView>
@@ -19,17 +17,10 @@
 #include <QtGui/QPainter>
 #include <QtCore/QtMath>
 
-//Hermes includes
-#include <BasicArrayObject.h>
-
 //Higiia includes
 #include <Util.h>
-#include <ScopeCaption.h>
-#include <QPushButtonAlter.h>
 #include <MedicalImageTable.h>
-#include <SirenSqlQuery.h>
-#include <OberonViewer.h>
-#include <FormDiagnosis.h>
+#include <QueryParameters.h>
 
 //Eigen includes
 #include <Eigen/Sparse>
@@ -75,8 +66,6 @@ class Analytics : public QMainWindow {
 
         //Workflow info
         int32_t oqId, userId;
-        OberonViewer *bufferViewer;
-        QString bufferQuery;
         QString link;
 
     private:
@@ -101,17 +90,8 @@ class Analytics : public QMainWindow {
         void state04(QByteArray message);
         void state05(QByteArray message);
         void state06(QByteArray message);
-        void state07(QByteArray message);
 
-        //State-machine for provenance collection
-        void state08();
-        void state09(QByteArray message);
-
-        void state10();
-        void state11();
-        void state12(QByteArray message);
-        void state13();
-
+        //Build data for UI components
         QString buildOqScope();
         QString buildOqStats();
         QString buildNeighborScope(MedicalImageTable tempSet, QStringList scopeList, const int rowId);
@@ -152,7 +132,6 @@ class Analytics : public QMainWindow {
         void on_btnSearchOi_clicked();
         void on_btnClose_clicked();
         void on_btnSearchOq_clicked();
-        void on_btnNewDiagnosis_clicked();
         void on_btnPACS_clicked();
 };
 

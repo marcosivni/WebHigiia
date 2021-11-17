@@ -34,13 +34,10 @@ OberonViewer::OberonViewer(bool vTable,
     this->scopeAttributes = scopeAttributes;
     this->vTableName = vTableName;
     this->metricName = metricName;
-    this->oqId = oqId;
-    this->userId = userId;
-    this->diagnosis = nullptr;
     this->link = link;
 
     ui->txtKnn->setText(QString::number(k));
-    this->kBridge = kBridge;
+    this->kBridge = QString::number(kBridge);
 
     currentImage = nullptr;
     queryImage = nullptr;
@@ -870,9 +867,6 @@ OberonViewer::~OberonViewer(){
         }
     }
     mapOidToNames.clear();
-    if (diagnosis != nullptr){
-        delete (diagnosis);
-    }
 
     delete (ui);
 }
@@ -903,27 +897,9 @@ void OberonViewer::on_btnZoomIn_clicked(){
 
 void OberonViewer::on_btnExit_clicked(){
 
-    if (userId != -1){
-
-        ui->lytCentral->setEnabled(false);
-        Image *currentImage = Util::openImage(oqFileName);
-        if (diagnosis != nullptr){
-            delete (diagnosis);
-        }
-        diagnosis = new FormDiagnosis(*currentImage, oqId, tableName, "origin: CBIR_exit", webSocket, userId);
-        connect(diagnosis, &FormDiagnosis::finished, this, &OberonViewer::state10);
-        delete (currentImage);
-        diagnosis->showFullScreen();
-    } else {
-        ui->lblServerSetup->setText("Reports are not allowed in this mode (provenance-disabled)!");
-    }
-}
-
-void OberonViewer::state10(){
-
-    disconnect(diagnosis, &FormDiagnosis::finished, this, &OberonViewer::state10);
     this->close();
 }
+
 
 void OberonViewer::on_btnZoomOut_clicked(){
 
@@ -973,42 +949,9 @@ void OberonViewer::on_btnPDF_clicked(){
 Image* OberonViewer::windowing(int width, int center){
 
     Image *aux = (Image*) currentImage->clone();
-
-// @New imp (below) is way more efficient...
-//    int32_t numBins = (int32_t) pow(2, aux->getBitsPerPixel());
-//    float grayScale[numBins];
-
-//    int32_t lowestVisibleValue = (center - ( (double) width/ (double) 2.0));
-//    int32_t highestVisibleValue = (center + ( (double) width/ (double) 2.0));
-
-//    for (int32_t x = 0; x < numBins; x++) {
-//        if (x <=  lowestVisibleValue){
-//            grayScale[x] = lowestVisibleValue;
-//        } else {
-//            if (x >= highestVisibleValue){
-//                grayScale[x] = highestVisibleValue;
-//            } else {
-//                grayScale[x] = ((x - (center - 0.5)) / (width - 1) + 0.5) * (highestVisibleValue - lowestVisibleValue) + lowestVisibleValue;
-//            }
-//        }
-//    }
+//VOLTAR
 //    aux->deletePixelMatrix();
 //    aux->createPixelMatrix(currentImage->getWidth(), currentImage->getHeight());
-//    for (size_t x = 0; x < aux->getWidth(); x++){
-//        for (size_t y = 0; y < aux->getHeight(); y++){
-//            Pixel *p;
-//                if (currentImage->getPixel(x, y).getGrayPixelValue() == 4095){
-//                    p =  new Pixel(currentImage->getPixel(x, y).getGrayPixelValue());
-//                } else {
-//                    p = new Pixel(grayScale[(uint32_t) currentImage->getPixel(x, y).getGrayPixelValue()]);
-//                }
-//            aux->setPixel(x, y, *p);
-//            delete (p);
-//        }
-//    }
-
-    aux->deletePixelMatrix();
-    aux->createPixelMatrix(currentImage->getWidth(), currentImage->getHeight());
 
     uint16_t n = 4095;
     double w = width - 1.0;
@@ -1189,26 +1132,6 @@ void OberonViewer::on_btnFeedback_clicked(){
         return;
     }
 
-    if (userId != -1){
-
-        ui->lytCentral->setEnabled(false);
-        Image *cImage = Util::openImage(oqFileName);
-        if (diagnosis != nullptr){
-            delete (diagnosis);
-        }
-        diagnosis = new FormDiagnosis(*cImage, oqId, tableName, "origin: Relevance_Feedback_Request", webSocket, userId);
-        connect(diagnosis, &FormDiagnosis::finished, this, &OberonViewer::state09);
-        delete (cImage);
-        diagnosis->showFullScreen();
-    } else {
-        ui->lblServerSetup->setText("Reports are not allowed in this mode (provenance-disabled)!");
-    }
-}
-
-void OberonViewer::state09(){
-
-    disconnect(diagnosis, &FormDiagnosis::finished, this, &OberonViewer::state09);
-
     std::vector<uint32_t> relevants;
     QString tblName, condition, sqlQuery;
     SirenSQLQuery buildRelevants, buildNonRelevants;
@@ -1236,8 +1159,6 @@ void OberonViewer::state09(){
     } else {
         tblName = tableName;
     }
-
-    obsProvenance.clear();
     if (!relevants.empty()){
         buildRelevants.addProjectionList( {"rf$PPV$" + tableName + "_"+ simAttribute + "."+ simAttribute, "'0' "});
         if (vTable){
@@ -1251,7 +1172,6 @@ void OberonViewer::state09(){
             if (x > 0){
                 condition += ", ";
             }
-            obsProvenance.append("r = " + QString::number(relevants[x]) + "\n");
             condition += QString::number(relevants[x]);
         }
         condition += ") ";
@@ -1276,7 +1196,6 @@ void OberonViewer::state09(){
             if (x > 0){
                 condition += ", ";
             }
-            obsProvenance.append("nr = " + QString::number(removedListOfIds[x]) + "\n");
             condition += QString::number(removedListOfIds[x]);
         }
         condition += ")";
@@ -1382,28 +1301,18 @@ void OberonViewer::state06(QByteArray message){
     condition += queryObjectValue;
     condition += " BY "+ metricName + " STOP AFTER " + ui->txtKnn->text();
     if (searchType == Util::BRIDGE_SEARCH){
-        condition += " BRIDGE " + QString::number(kBridge);
+        condition += " BRIDGE " + kBridge;
     }
     queryT.addWhereAttribute(condition);
     queryT.addOrderByAttribute(tblName + ".Id");
 
-
-    bufferQuery = queryT.generateQuery();
     connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state07);
-    webSocket->sendBinaryMessage(Util::buildProvenanceInsert(userId, oqId, tableName, "relevance feedback", bufferQuery, obsProvenance).toStdString().c_str());
+    webSocket->sendBinaryMessage(queryT.generateQuery().toStdString().c_str());
 }
 
 void OberonViewer::state07(QByteArray message){
 
     disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state07);
-
-    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state08);
-    webSocket->sendBinaryMessage(bufferQuery.toStdString().c_str());
-}
-
-void OberonViewer::state08(QByteArray message){
-
-    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state08);
 
     //Clear current variables, including result sets ...
     ui->lblServerSetup->setText("Rebuilding, please wait ...");
@@ -1441,18 +1350,6 @@ void OberonViewer::on_cbxWindowing_currentIndexChanged(int index){
     adjustSliders();
     showWindowing();
 }
-
-
-void OberonViewer::on_btnDiagnosis_clicked(){
-
-    if (userId != -1){
-        FormDiagnosis *diagnosis = new FormDiagnosis(*currentImage, oqId, tableName, "origin: Report_after_CBIR", webSocket, userId);
-        diagnosis->showFullScreen();
-    } else {
-        ui->lblServerSetup->setText("Reports are not allowed in this mode (provenance-disabled)!");
-    }
-}
-
 
 void OberonViewer::on_btnPACS_clicked(){
 

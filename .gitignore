@@ -1,7 +1,7 @@
 # Regular files
 /3rd-party
 *~
-WASM_Higiia.pro
+*.pro
 transfer.bat
 *.svg
 

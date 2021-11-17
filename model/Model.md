@@ -96,9 +96,8 @@ INSERT INTO Mammogram (Id,  IdStudy,  Filename, Patient_Name, PcaF, Image_Type, 
 
 While queries can be issued to the server counterpart (SIREN) through extended SQL, Higiia requires the loading of (potentially undiagnosed) query images into a proper 'query pool' as well as granting users the permission to access them.
 
-The set of query images must be loaded in a separated table named with the prefix `U_`. In the mammogram dataset example, this table is `U_Mammogram` and contains all reserved and mandatory attributes of table `Mammogram` plus the `PARTICULATE` attributes employed for mapping the space of features. Therefore, the relational representation of table `U_Mammogram` is as follows.
+The set of query images must be loaded in a separated table named with the prefix `U_`. In the mammogram dataset example, this table is `U_Mammogram` and contains all reserved and mandatory attributes of table `Mammogram` plus the `PARTICULATE` attributes employed for mapping the space of features. Therefore, the SQL representation of table `U_Mammogram` is as follows.
 
-![Mammogram table](example/imgs/UMammogramTable.png)
 
 ```sql
 CREATE TABLE U_Mammogram (
@@ -109,15 +108,18 @@ CREATE TABLE U_Mammogram (
     PcaF PARTICULATE (3),
     Image_Type VARCHAR(45),
     Image_Class VARCHAR(45),
+    url VARCHAR(300),
     PRIMARY KEY (Id), 
     METRIC (PcaF) USING (L2, L1, CANBERRA) 
 );
 ```
 
+> Attribute {`url`} is **reserved** and **mandatory**. It connects the query image with other HIS systems with link sharing support, such as external PACS-Viewers.
+
 After the table creation, we can populate it with query images, such as [this entry/example][oq].
 
 ```sql
-INSERT INTO U_Mammogram VALUES (1, 2, 'mammo/query_example_2.krl', 'Patient X', {0.57, 0.53, 0.47}, NULL, NULL);
+INSERT INTO U_Mammogram VALUES (1, 2, 'mammo/query_example_2.krl', 'Patient X', {0.57, 0.53, 0.47}, "", NULL, NULL);
 ```
 
 Next, we must include the query image in a user-associated pool with an  `INSERT INTO` in Higiia internal tables, as follows.

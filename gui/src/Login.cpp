@@ -6,8 +6,6 @@ Login::Login(QWebSocket *webSocket, QWidget *parent) : QMainWindow(parent), ui(n
     ui->setupUi(this);
     QDesktopWidget *desktop = QApplication::desktop();
 
-    this->setAttribute(Qt::WA_DeleteOnClose);
-
     uint16_t screenWidth, width;
     uint16_t screenHeight, height;
     uint16_t x, y;

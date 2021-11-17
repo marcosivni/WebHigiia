@@ -9,7 +9,10 @@ Analytics::Analytics(QString tableName,
                      MedicalImageTable rSet,
                      bool vTable,
                      QString vTableName,
-                     QWebSocket *webSocket, int32_t oqId, int32_t userId, QString link,
+                     QWebSocket *webSocket,
+                     int32_t oqId,
+                     int32_t userId,
+                     QString link,
                      QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::Analytics){
@@ -67,7 +70,6 @@ Analytics::Analytics(QString tableName,
 void Analytics::lockWidgets(){
 
     ui->btnClose->setEnabled(false);
-    ui->btnNewDiagnosis->setEnabled(false);
     ui->btnOi->setEnabled(false);
     ui->btnOq->setEnabled(false);
     ui->btnPACS->setEnabled(false);
@@ -78,15 +80,11 @@ void Analytics::lockWidgets(){
     ui->btnStatsOi->setEnabled(false);
     ui->btnStatsOq->setEnabled(false);
     ui->btnUpdate->setEnabled(false);
-
-    ui->txtNumberDiversity->setEnabled(false);
-    ui->txtNumberNeighbors->setEnabled(false);
 }
 
 void Analytics::unlockWidgets(){
 
     ui->btnClose->setEnabled(true);
-    ui->btnNewDiagnosis->setEnabled(true);
     ui->btnOi->setEnabled(true);
     ui->btnOq->setEnabled(true);
     ui->btnPACS->setEnabled(true);
@@ -97,9 +95,6 @@ void Analytics::unlockWidgets(){
     ui->btnStatsOi->setEnabled(true);
     ui->btnStatsOq->setEnabled(true);
     ui->btnUpdate->setEnabled(true);
-
-    ui->txtNumberDiversity->setEnabled(true);
-    ui->txtNumberNeighbors->setEnabled(true);
 }
 
 Analytics::~Analytics(){
@@ -1124,163 +1119,6 @@ void Analytics::on_btnStatsOq_clicked(){
 void Analytics::on_btnSearchOi_clicked(){
 
     lockWidgets();
-    state11();
-}
-
-void Analytics::state08(){
-
-    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state08);
-    ui->lblStatus->setText("CBIR is ready!");
-
-    bufferViewer->showFullScreen();
-    unlockWidgets();
-}
-
-
-void Analytics::on_btnClose_clicked(){
-
-    this->close();
-}
-
-void Analytics::state13(){
-
-    //EMPTY
-}
-
-void Analytics::on_btnSearchOq_clicked(){
-
-    state10();
-}
-
-void Analytics::state09(QByteArray message){
-
-    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state09);
-    ui->lblStatus->setText("Searching, please wait ...");
-
-    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state07);
-    webSocket->sendBinaryMessage(bufferQuery.toStdString().c_str());
-}
-
-void Analytics::state07(QByteArray message){
-
-    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state07);
-
-    MedicalImageTable trSet(Util::toStringList(message.split('\n')));
-    QString scopeAttributes, tblName;
-
-    //Query table
-    if (vTable){
-        tblName = "temp";
-    } else {
-        tblName = tableName;
-    }
-    for (int x = 0; x < scopeAtts.size(); x++){
-        if (x){
-            scopeAttributes += ", ";
-        }
-        scopeAttributes += tblName + "." + scopeAtts.at(x);
-    }
-
-    bufferViewer = nullptr;
-    if (trSet.size()){
-        bufferViewer = new OberonViewer(vTable,
-                                        scopeAttributes,
-                                        tableName,
-                                        oqFileName,
-                                        simAttribute,
-                                        oq,
-                                        trSet,
-                                        searchType,
-                                        ui->txtNumberNeighbors->text().toUInt(),
-                                        ui->txtNumberDiversity->text().toUInt(),
-                                        vTableName,
-                                        metricName,
-                                        webSocket,
-                                        oqId,
-                                        userId,
-                                        link,
-                                        nullptr);
-        bufferViewer->showFullScreen();
-    } else {
-        ui->lblStatus->setText("Empty result set!");
-    }
-
-    unlockWidgets();
-    ui->lblStatus->setText("CBIR is ready!");
-}
-
-
-void Analytics::on_btnNewDiagnosis_clicked(){
-
-    //EMPTY
-}
-
-void Analytics::state10(){
-
-    ui->lblStatus->setText("Building query, please wait...");
-    lockWidgets();
-
-    QString queryObjectValue, tblName, condition;
-    SirenSQLQuery queryT;
-
-    queryObjectValue = " { ";
-    for (size_t x = 0; x < oq.size(); x++){
-        if (x > 0)
-            queryObjectValue += ", ";
-        queryObjectValue += QString::number( (*oq.get(x)) );
-    }
-    queryObjectValue += " }";
-
-    //Query table
-    if (vTable){
-        tblName = "temp";
-    } else {
-        tblName = tableName;
-    }
-
-    //Projection
-    for (int x = 0; x < scopeAtts.size(); x++){
-        queryT.addProjectionAttribute(tblName + "." + scopeAtts.at(x));
-    }
-    queryT.addProjectionAttribute(tblName + ".Filename Filename");
-    queryT.addProjectionAttribute(tblName + ".Id Id");
-    //Reading/Join
-    if (vTable){
-        queryT.addTable("( " + vTableName + " ) AS temp ");
-    } else {
-        queryT.addTable(tblName);
-    }
-    //Selection
-    condition = tblName +"."+ simAttribute;
-    if (ui->rbtSimilarity->isChecked()){
-        condition += " NEAR ";
-        searchType = Util::SIMILARITY_SEARCH;
-    } else {
-        if (ui->rbtDiversity->isChecked()){
-            condition += " DIVERSITY NEAR ";
-            searchType = Util::DIVERSITY_SEARCH;
-        } else {
-            condition += " DIVERSIFIED NEAR ";
-            searchType = Util::BRIDGE_SEARCH;
-        }
-    }
-    condition += queryObjectValue;
-    condition += " BY "+ metricName + " STOP AFTER " + ui->txtNumberNeighbors->text();
-    if (ui->rbtBridge->isChecked()){
-        condition += " BRIDGE " + ui->txtNumberDiversity->text();
-    }
-    queryT.addWhereAttribute(condition);
-    //Order by
-    queryT.addOrderByAttribute(tblName + ".Id");
-
-    bufferQuery = queryT.generateQuery();
-
-    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state12);
-    webSocket->sendBinaryMessage(bufferQuery.toStdString().c_str());
-}
-
-void Analytics::state11(){
-
     MedicalImageTable newRSet;
     QString influencer, scopeAttributes;
     int col;
@@ -1312,9 +1150,8 @@ void Analytics::state11(){
         scopeAttributes += scopeAtts[x];
     }
 
-    bufferViewer = nullptr;
     if (newRSet.size() > 0){
-        bufferViewer = new OberonViewer(false,
+        OberonViewer *bufferViewer = new OberonViewer(false,
                                         scopeAttributes,
                                         tableName,
                                         oqFileName,
@@ -1322,7 +1159,7 @@ void Analytics::state11(){
                                         oq,
                                         newRSet,
                                         Util::SIMILARITY_SEARCH,
-                                        newRSet.size() - 1,
+                                        newRSet.size(),
                                         1,
                                         tableName,
                                         metricName,
@@ -1331,64 +1168,26 @@ void Analytics::state11(){
                                         userId,
                                         link,
                                         nullptr);
+        bufferViewer->showFullScreen();
+        unlockWidgets();
+        ui->lblStatus->setText("CBIR is ready!");
     } else {
         ui->lblStatus->setText("Empty result set!");
         return;
     }
-
-    state08();
 }
 
-void Analytics::state12(QByteArray message){
 
-    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state12);
+void Analytics::on_btnClose_clicked(){
 
-    MedicalImageTable trSet(Util::toStringList(message.split('\n')));
-    QString scopeAttributes, tblName;
-
-    //Query table
-    if (vTable){
-        tblName = "temp";
-    } else {
-        tblName = tableName;
-    }
-    for (int x = 0; x < scopeAtts.size(); x++){
-        if (x){
-            scopeAttributes += ", ";
-        }
-        scopeAttributes += tblName + "." + scopeAtts.at(x);
-    }
-
-    bufferViewer = nullptr;
-    if (trSet.size()){
-        bufferViewer = new OberonViewer(vTable,
-                                        scopeAttributes,
-                                        tableName,
-                                        oqFileName,
-                                        simAttribute,
-                                        oq,
-                                        trSet,
-                                        searchType,
-                                        ui->txtNumberNeighbors->text().toUInt(),
-                                        ui->txtNumberDiversity->text().toUInt(),
-                                        vTableName,
-                                        metricName,
-                                        webSocket,
-                                        oqId,
-                                        userId,
-                                        link,
-                                        nullptr);
-        bufferViewer->showFullScreen();
-    } else {
-        ui->lblStatus->setText("Empty result set!");
-    }
-
-    unlockWidgets();
-    ui->lblStatus->setText("CBIR is ready!");
-
-    state08();
+    this->close();
 }
 
+void Analytics::on_btnSearchOq_clicked(){
+
+    QueryParameters *searchForm = new QueryParameters(oqId, tableName, oqFileName, webSocket, userId, oq, link, nullptr);
+    searchForm->showFullScreen();
+}
 
 void Analytics::on_btnPACS_clicked(){
 
