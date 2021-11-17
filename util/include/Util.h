@@ -42,8 +42,6 @@ class Util{
         static void removeDirectoryAndContent(QString dirPath = WFS_NAME);
         static void removeImage(QString filename);
         static void print(QStringList list);
-
-        static QString buildProvenanceInsert(uint32_t userId, uint32_t imageId, QString tableName, QString op, QString opValue, QString obs);
 };
 
 #endif // UTIL_H
