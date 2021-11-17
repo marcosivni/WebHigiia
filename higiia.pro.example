@@ -31,7 +31,7 @@ INCLUDEPATH += ../artemis/include \
 
 #Hermes includepath
 INCLUDEPATH += ../hermes/include/
-INCLUDEPATH += ../util/include/
+INCLUDEPATH += ../hermes/util/include/
 
 
 #Higiia includepath
