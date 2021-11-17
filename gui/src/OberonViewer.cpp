@@ -949,9 +949,8 @@ void OberonViewer::on_btnPDF_clicked(){
 Image* OberonViewer::windowing(int width, int center){
 
     Image *aux = (Image*) currentImage->clone();
-//VOLTAR
-//    aux->deletePixelMatrix();
-//    aux->createPixelMatrix(currentImage->getWidth(), currentImage->getHeight());
+    aux->deletePixelMatrix();
+    aux->createPixelMatrix(currentImage->getWidth(), currentImage->getHeight());
 
     uint16_t n = 4095;
     double w = width - 1.0;
