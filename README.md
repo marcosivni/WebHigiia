@@ -48,7 +48,7 @@ The following steps are required to set your first Higiia CBMIR application up:
 The Higiia client tool relies on a series of background technologies and 3rd-party libraries, namely:
 
 1. Background technologies 
-    - [Qt SDK][qt] - Qt Cross-Platform and SDK C++ development environment.
+    - [Qt SDK][qt] - Qt Cross-Platform and SDK C++ development environment. In addition module CHARTS must be downloaded (sudo apt-get install libqt5charts5-dev on Debian-based distros).
     - [Emscripten][ems] - The Open Source Emscripten compiler toolchain (from C++) to WebAssembly. Supported (in some way) by Qt for WebAssembly.
 
 2.  3rd-party libraries (self-contained)
