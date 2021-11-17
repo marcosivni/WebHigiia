@@ -19,7 +19,6 @@
 #include <QueryParameters.h>
 #include <OberonViewer.h>
 #include <Analytics.h>
-#include <FormDiagnosis.h>
 
 namespace Ui {
     class UnreportedStudies;

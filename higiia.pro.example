@@ -19,7 +19,7 @@ INCLUDEPATH += ../dicomlib/include
 INCLUDEPATH += ../dicomlib
 
 #Eigen includepath
-INCLUDEPATH += ../eigen/Eigen
+INCLUDEPATH += ../eigen
 
 #Artemis includepath
 INCLUDEPATH += ../artemis/include \
