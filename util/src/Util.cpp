@@ -141,6 +141,11 @@ void Util::saveImageAndThumbnailToFS(QString filename, QByteArray imgStream){
     out.close();
 
     Image *img = Util::openImage(filename);
+    if (!img->windowedPixels()){
+        Image *bck = img->windowing(img->getWindowWidth(), img->getWindowCenter());
+        delete (img);
+        img = bck;
+    }
     QImage *qimg = Util::convertImageToQImage(img);
     *qimg = qimg->scaled(120,120);
     qimg->save((WFS_NAME + filename) + "_thumb.jpg");
@@ -163,6 +168,11 @@ void Util::saveImageAndThumbnailToFS(QString filename, QByteArray imgStream, QSi
     out.close();
 
     Image *img = Util::openImage(filename);
+    if (!img->windowedPixels()){
+        Image *bck = img->windowing(img->getWindowWidth(), img->getWindowCenter());
+        delete (img);
+        img = bck;
+    }
     QImage *qimg = Util::convertImageToQImage(img);
     *qimg = qimg->scaled(thumbSize);
     qimg->save((WFS_NAME + filename) + "_thumb.jpg");

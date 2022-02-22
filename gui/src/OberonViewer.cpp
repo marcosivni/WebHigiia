@@ -86,6 +86,9 @@ void OberonViewer::fillThumbnails(){
     currentImage = Util::openImage(oqFileName);
     adjustSliders();
     fillQueryCenter(currentImage);
+    if (!currentImage->windowedPixels()){
+        showWindowing();
+    }
     queryImage = currentImage;
 
     if (searchType == Util::SIMILARITY_SEARCH || searchType == Util::DIVERSITY_SEARCH){
@@ -513,6 +516,12 @@ void OberonViewer::fillQueryCenter(Image *src, uint32_t scale){
     ui->lblCenter->setPixmap(QPixmap::fromImage(img->scaled(scale, scale)));
 
     if(queryImage == nullptr){
+        if (!src->windowedPixels()){
+            Image *aux = src->windowing(src->getWindowWidth(), src->getWindowCenter());
+            delete (img);
+            img  = Util::convertImageToQImage(aux);
+            delete (aux);
+        }
         QIcon ico;
         ico.addPixmap(QPixmap::fromImage(img->scaled(200, 200)));
         ui->btnQueryCenter->setIcon(ico);
@@ -541,6 +550,9 @@ void OberonViewer::changeCenterImage(){
     adjustSliders();
 
     fillQueryCenter(currentImage);
+    if (!currentImage->windowedPixels()){
+        showWindowing();
+    }
 }
 
 void OberonViewer::diversityImageClicked() {
@@ -880,6 +892,9 @@ void OberonViewer::on_btnZoomIn_clicked(){
     if (scale < 5.0) {
         int size = (int) 600*scale;
         fillQueryCenter(currentImage, size);
+        if (!currentImage->windowedPixels()){
+            showWindowing();
+        }
         ui->lblCenter->setMinimumWidth(size);
         ui->lblCenter->setMinimumHeight(size);
     }
@@ -946,36 +961,6 @@ void OberonViewer::on_btnPDF_clicked(){
     QFileDialog::saveFileContent(content, fileName);
 }
 
-Image* OberonViewer::windowing(int width, int center){
-
-    Image *aux = (Image*) currentImage->clone();
-    aux->deletePixelMatrix();
-    aux->createPixelMatrix(currentImage->getWidth(), currentImage->getHeight());
-
-    uint16_t n = 4095;
-    double w = width - 1.0;
-    double c = center - 0.5;
-
-    for (size_t x = 0; x < aux->getWidth(); x++){
-        for (size_t y = 0; y < aux->getHeight(); y++){
-            Pixel *p;
-            if (currentImage->getPixel(x, y).getGrayPixelValue() <= c - 0.5*w){
-                p =  new Pixel(0);
-            } else {
-                if (currentImage->getPixel(x, y).getGrayPixelValue() > c + 0.5*w){
-                    p =  new Pixel(n);
-                } else {
-                    p =  new Pixel( (((currentImage->getPixel(x, y).getGrayPixelValue() - c)/w + 0.5) * (n)) );
-                }
-            }
-            aux->setPixel(x, y, *p);
-            delete (p);
-        }
-    }
-
-    return aux;
-}
-
 void OberonViewer::adjustSliders(){
 
     if (currentImage->type() == Image::DICOM || currentImage->type() == Image::KRL){
@@ -1021,7 +1006,7 @@ void OberonViewer::adjustSliders(){
 
 void OberonViewer::showWindowing(){
 
-    Image *i = windowing(ui->sliderWidth->value(), ui->sliderCenter->value());
+    Image *i = currentImage->windowing(ui->sliderWidth->value(), ui->sliderCenter->value());
     QImage *img;
 
     img = Util::convertImageToQImage(i);
@@ -1087,6 +1072,9 @@ void OberonViewer::on_btnQueryCenter_clicked(){
     currentImage = queryImage;
     adjustSliders();
     fillQueryCenter(currentImage);
+    if (!currentImage->windowedPixels()){
+        showWindowing();
+    }
 }
 
 

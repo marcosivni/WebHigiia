@@ -93,7 +93,6 @@ class OberonViewer : public QMainWindow { Q_OBJECT
         void loadThumbnailsDown(QList<uint16_t> rowIds);
 
         //Methods for image manipulation
-        Image* windowing(int width, int center);
         void showWindowing();
         void adjustSliders();
 

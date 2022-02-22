@@ -518,7 +518,9 @@ void Analytics::unitaryScale(FeatureVectorList *dataset){
 
     for (size_t x = 0; x < dataset->size(); x++){
         for (size_t y = 0; y < minD.size(); y++){
-            dataset->at(x)[y] =  ((double) (dataset->at(x)[y] - minD[y])/ (double) (maxD[y] - minD[y]));
+            if  ((maxD[y] - minD[y]) > 0){
+                dataset->at(x)[y] =  ((double) (dataset->at(x)[y] - minD[y])/ (double) (maxD[y] - minD[y]));
+            }
         }
     }
 }
@@ -528,8 +530,6 @@ FeatureVectorList Analytics::pca2D(){
     FeatureVectorList dataset, redDataset;
     FeatureVector oi;
     int colInfluenced = rSet.locateColumn(simAttribute + "$bridged");
-    size_t cardinality = dataset.size();
-    size_t dimensionality = oi.size();
 
 
     //Fast PCA - rSet entries only
@@ -539,6 +539,10 @@ FeatureVectorList Analytics::pca2D(){
     }
     //Insert oq at the end
     dataset.push_back(oq);
+    
+    size_t cardinality = dataset.size();
+    size_t dimensionality = oi.size();
+
 
     if (dimensionality > 2){
         //[0-1] scale
