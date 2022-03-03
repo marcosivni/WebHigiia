@@ -314,9 +314,9 @@ The **glossary** for WebHigiia Analytics are as follows:
 [//]: # (These are reference links used in the body of this note and get stripped out when the markdown processor does its job. There is no need to format nicely because it shouldn't be seen. Thanks SO - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-syntax)
 
    [siren]: <https://github.com/marcosivni/siren>
-   [higiiaddl]: <WebHigiia_DDL.sql>
-   [mammo]: <example/data/mammo>
-   [oq]: <example/data/mammo/query_example_2.krl>
+   [higiiaddl]: <https://github.com/marcosivni/webhigiia/tree/main/model/WebHigiia_DDL.sql>
+   [mammo]: <https://github.com/marcosivni/webhigiia/tree/main/model/example/data/mammo>
+   [oq]: <https://github.com/marcosivni/webhigiia/tree/main/model/example/data/mammo/query_example_2.krl>
    [hetland]: <https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.216.5538&rep=rep1&type=pdf>
    [drosou]: <https://www.cs.drexel.edu/~julia/documents/big.2016.0054.pdf>
    [jasbick]: <https://link.springer.com/chapter/10.1007/978-3-030-60936-8_11>
