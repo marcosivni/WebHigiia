@@ -7,7 +7,7 @@ WebHigiia relies on a set of reserved tables and attributes for mapping dataset 
 
 A simple telnet connection (`telnet <siren-ip> <siren-port>`) allows you to feed the script to the server-side. The default creation script is available [here][higiiaddl], and the relational representation of the tables are as follows:
 
-![WebHigiia base tables](example/imgs/WebHigiiaBaseTables.png)
+![WebHigiia base tables](example/imgs/HigiiaBaseTables.png)
 
 - Table Login: For users and passwords (will be deprecated as soon as QSsl gets supported by Emscripten).
 - Table Pool: Associates query images with users.
