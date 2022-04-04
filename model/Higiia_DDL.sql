@@ -43,10 +43,3 @@ CREATE TABLE Caption (
     caption VARCHAR (256),
     PRIMARY KEY (tableN, attribute, valueN)
 );
-
-
-
-searchType
-1- Similarity 10
-2- BRIDGE 10, 10
-3- Analytics 20, 20 
