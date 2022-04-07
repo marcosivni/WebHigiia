@@ -9,5 +9,14 @@ CREATE TABLE H_Provenance (
     PRIMARY KEY (tableName, userId, imageId, tStamp),
     FOREIGN KEY (userId, imageId, tableName) REFERENCES Pool (userId, imageId, tableName) ON DELETE CASCADE ON UPDATE CASCADE
 );
+
+
+CREATE TABLE H_Diagnoses (
+    id INTEGER,
+    tableName VARCHAR(255),
+    diagnosis VARCHAR(255),
+    PRIMARY KEY (id)
+);
+
     
     
