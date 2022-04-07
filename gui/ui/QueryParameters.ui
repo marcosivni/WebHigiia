@@ -478,7 +478,7 @@ QGroupBox {
                  </size>
                 </property>
                 <property name="text">
-                 <string>10</string>
+                 <string>15</string>
                 </property>
                </widget>
               </item>
@@ -498,7 +498,7 @@ QGroupBox {
                  <string>Similarity Search</string>
                 </property>
                 <property name="checked">
-                 <bool>true</bool>
+                 <bool>false</bool>
                 </property>
                </widget>
               </item>
@@ -564,6 +564,9 @@ QGroupBox {
                <widget class="QRadioButton" name="rbtDiversity">
                 <property name="text">
                  <string>Diversity Search</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
                 </property>
                </widget>
               </item>

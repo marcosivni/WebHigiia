@@ -1,13 +1,21 @@
 //Qt includes
 #include <QApplication>
 #include <QWebSocket>
+#include <QDebug>
 
+
+/**
+#if M_PROV
+    qDebug() << "OKJ";
+#else
+    qDebug() << "NOT";
+#endif
+
+*/
 
 
 //GUI includes
 #include <Login.h>
-
-#include <DcmLib.h>
 
 int main(int argc, char *argv[])
 {

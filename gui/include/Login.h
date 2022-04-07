@@ -7,7 +7,7 @@
 #include <QWebSocket>
 #include <QUrl>
 
-//Higiia includes
+//WebHigiia includes
 #include <ResultTable.h>
 #include <SirenSqlQuery.h>
 #include <UnreportedStudies.h>

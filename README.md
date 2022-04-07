@@ -1,4 +1,4 @@
-# WebWebHigiia - Client Project Sandbox 
+# WebHigiia - Client Project Sandbox 
 
 ## _A domainless Content-Based Medical Image Retrieval tool for CT and RX_
 
@@ -81,7 +81,7 @@ make
 Then, run the following command.
 
 ```sh
-cd higiia
+cd webhigiia
 ./build.sh && make clean
 ```
 

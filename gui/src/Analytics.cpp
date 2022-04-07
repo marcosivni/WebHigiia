@@ -40,6 +40,10 @@ Analytics::Analytics(QString tableName,
 
     move ( x, y );
 
+    #if M_PROV
+        diagnosisForm = nullptr;
+    #endif
+
     this->tableName = tableName;
     this->webSocket = webSocket;
     this->rSet = rSet;
@@ -52,6 +56,7 @@ Analytics::Analytics(QString tableName,
     this->oqId = oqId;
     this->userId = userId;
     this->link = link;
+    searchForm = nullptr;
 
     seriesByTarget = nullptr;
     chart = nullptr;
@@ -99,6 +104,11 @@ void Analytics::unlockWidgets(){
 
 Analytics::~Analytics(){
 
+    if (searchForm != nullptr){
+        delete (searchForm);
+    }
+    searchForm = nullptr;
+
     if (seriesByTarget != nullptr) {
         for (int i = 0; i < nSeries; i++) {
             delete (seriesByTarget[i]);
@@ -117,6 +127,8 @@ Analytics::~Analytics(){
     mapInfluencedRows.clear();
     mapPointToRowId.clear();
     dataset2D.clear();
+
+    mapNameToMask.clear();
 
     delete ui;
 }
@@ -220,7 +232,7 @@ void Analytics::loadInfluencedImages(){
             connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state04);
             webSocket->sendBinaryMessage(queryT.generateQuery().toStdString().c_str());
         } else {
-            downloadNonInfluencedImages();
+            donwloadNonInfluencedMasks();
         }
     }
 }
@@ -273,9 +285,36 @@ void Analytics::state03(QByteArray message){
             connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state04);
             webSocket->sendBinaryMessage(queryT.generateQuery().toStdString().c_str());
         } else {
-            downloadNonInfluencedImages();
+            donwloadNonInfluencedMasks();
         }
     }
+}
+
+void Analytics::donwloadNonInfluencedMasks(){
+
+    QStringList ids;
+    for (int x = 0; x < rSet.size(); x++){
+        ids.append(rSet.fetchByColumnId(x, rSet.locateImageID()));
+    }
+
+
+    SirenSQLQuery buildMaskStatement;
+    buildMaskStatement.addProjectionAttribute("Id, Mask");
+    buildMaskStatement.addTable(tableName);
+
+    QString inList = "Id IN (";
+    for (int x = 0; x < ids.size(); x++){
+        if (x > 0){
+            inList.append(", ");
+        }
+        inList.append(ids[x]);
+    }
+    inList.append(" )");
+    buildMaskStatement.addWhereAttribute(inList);
+
+    ui->lblStatus->setText("Loading masks, please wait ...");
+    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state07);
+    webSocket->sendBinaryMessage(buildMaskStatement.generateQuery().toStdString().c_str());
 }
 
 void Analytics::state04(QByteArray message){
@@ -318,7 +357,7 @@ void Analytics::state04(QByteArray message){
         connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state04);
         webSocket->sendBinaryMessage(queryT.generateQuery().toStdString().c_str());
     } else {
-        downloadNonInfluencedImages();
+        donwloadNonInfluencedMasks();
     }
 }
 
@@ -344,7 +383,7 @@ void Analytics::downloadNonInfluencedImages(){
         ui->lblStatus->setText("Downloading " + QString::number(counterImgs) + "/" + QString::number(rSet.size())+ ", please wait ...");
         webSocket->sendBinaryMessage(request.toStdString().c_str());
     } else {
-        downloadOq();
+        downloadOqMask();
     }
 }
 
@@ -359,7 +398,7 @@ void Analytics::state05(QByteArray message){
     filename = rSet.fetchByColumnId(counterImgs, posImg);
 
     if (!filename.toStdString().empty()){
-        Util::saveImageAndThumbnailToFS(filename, message, QSize(300,300));
+        Util::saveImageAndThumbnailToFS(filename, message, QSize(300,300), mapNameToMask[filename]);
     } else {
         ui->lblStatus->setText("Local storage fatal error.");
     }
@@ -378,15 +417,29 @@ void Analytics::state05(QByteArray message){
         connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state05);
         webSocket->sendBinaryMessage(request.toStdString().c_str());
     } else {
-        downloadOq();
+        downloadOqMask();
     }
+}
+
+void Analytics::downloadOqMask(){
+
+    SirenSQLQuery buildMaskStatement;
+    buildMaskStatement.addProjectionAttribute("Id, Mask");
+    buildMaskStatement.addTable("U_" + tableName);
+    buildMaskStatement.addWhereAttribute("Id = " + QString::number(oqId));
+
+    ui->lblStatus->setText("Loading masks, please wait ...");
+    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state08);
+    webSocket->sendBinaryMessage(buildMaskStatement.generateQuery().toStdString().c_str());
 }
 
 void Analytics::downloadOq(){
 
+
     ui->lblStatus->setText("Downloading query image, please wait ...");
     if (QFileInfo::exists(WFS_NAME + oqFileName.simplified() )
             && QFileInfo(WFS_NAME + oqFileName.simplified()).isFile()){
+
         dataset2D = pca2D();
         fillQueryData();
         populateData();
@@ -414,12 +467,13 @@ void Analytics::state06(QByteArray message){
     disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state06);
 
     if (!oqFileName.toStdString().empty()){
-        Util::saveImageAndThumbnailToFS(oqFileName, message, QSize(300,300));
+        Util::saveImageAndThumbnailToFS(oqFileName, message, QSize(300,300), mapNameToMask[oqFileName]);
     } else {
         ui->lblStatus->setText("Local storage fatal error.");
     }
 
     dataset2D = pca2D();
+
     fillQueryData();
     populateData();
 
@@ -433,6 +487,41 @@ void Analytics::state06(QByteArray message){
     ui->panelMining->show();
     ui->lblStatus->setText("CBIR is ready!");
     unlockWidgets();
+
+}
+
+void Analytics::state07(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state07);
+
+    int posId, posMask;
+    ResultTable masks(Util::toStringList(message.split('\n')));
+
+    if (masks.size()){
+        posId = masks.locateColumn("Id");
+        posMask = masks.locateColumn("Mask");
+
+        //Load and map image masks
+        for (int x = 0; x < masks.size(); x++){
+            QString filename = rSet.fetchByColumnId(rSet.locateFirstRow(masks.fetchByColumnId(x, posId), rSet.locateImageID()), rSet.locateImageFilename());
+            mapNameToMask[filename] = masks.fetchByColumnId(x, posMask);
+        }
+    }
+
+    downloadNonInfluencedImages();
+}
+
+void Analytics::state08(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &Analytics::state08);
+
+    ResultTable masks(Util::toStringList(message.split('\n')));
+
+    if (masks.size()){
+        mapNameToMask[oqFileName] = masks.fetchByColumnId(0, masks.locateColumn("Mask"));
+    }
+
+    downloadOq();
 }
 
 void Analytics::fillQueryData(){
@@ -529,8 +618,8 @@ FeatureVectorList Analytics::pca2D(){
 
     FeatureVectorList dataset, redDataset;
     FeatureVector oi;
-    int colInfluenced = rSet.locateColumn(simAttribute + "$bridged");
 
+    int colInfluenced = rSet.locateColumn(simAttribute + "$bridged");
 
     //Fast PCA - rSet entries only
     for (int x = 0; x < rSet.size(); x++){
@@ -539,10 +628,9 @@ FeatureVectorList Analytics::pca2D(){
     }
     //Insert oq at the end
     dataset.push_back(oq);
-    
+
     size_t cardinality = dataset.size();
     size_t dimensionality = oi.size();
-
 
     if (dimensionality > 2){
         //[0-1] scale
@@ -681,42 +769,14 @@ QString Analytics::buildOqScope(){
     QString answer, prediction;
     std::string caption;
     int posScope;
-    double maxFrequency, sumFrequency;
-
-    //Histogram <value, frequency>
-    std::vector<QString> values;
-    std::vector<uint16_t> frequencies;
+    double maxFrequency;
 
     //For each scope attribute...
-    for (int x = 0; x < scopeAtts.size(); x++){
+    for (int x = 0; x < 1; x++){
 
         posScope = Util::findColumn(scopeAtts[x], rSet.fetchCaption());
-
-        //... build a histogram by scanning the result set
-        for (int k = 0; k < rSet.size(); k++){
-            QString value = rSet.fetchByColumnId(k, posScope);
-            bool found = false;
-            for (size_t itV = 0; ((!found) && (itV < values.size())); itV++){
-                found = (value.toStdString() == values[itV].toStdString());
-                if (found){
-                    frequencies[itV]++;
-                }
-            }
-            if (!found){
-                values.push_back(value);
-                frequencies.push_back(1);
-            }
-        }
-
-        sumFrequency = maxFrequency = 0.0;
-        prediction = values[0];
-        for (size_t k = 0; k < values.size(); k++){
-            if (maxFrequency < frequencies[k]){
-                maxFrequency = frequencies[k];
-                prediction = values[k];
-            }
-            sumFrequency += frequencies[k];
-        }
+        prediction = Util::mostFrequentValue(rSet.fetchColumn(posScope));
+        maxFrequency = Util::highestFrequencyPercent(rSet.fetchColumn(posScope));
 
         if (answer.size()){
             answer += "\n";
@@ -728,12 +788,8 @@ QString Analytics::buildOqScope(){
         if (scopeCaption.findCaption(scopeAtts[x], prediction, &caption)){
             answer += " = " + QString(caption.c_str());
         }
-        answer += " ~" + QString::number((maxFrequency/sumFrequency)*100.0, 'f', 2) + "% of similar cases";
-
-        values.clear();
-        frequencies.clear();
+        answer += " ~" + QString::number(maxFrequency*100.0, 'f', 2) + "% similar cases";
     }
-
 
     return answer;
 }
@@ -1122,6 +1178,57 @@ void Analytics::on_btnStatsOq_clicked(){
 
 void Analytics::on_btnSearchOi_clicked(){
 
+    #if M_PROV
+    {
+        Image *currentImage = Util::openImage(oqFileName);
+        if (diagnosisForm != nullptr){
+            delete (diagnosisForm);
+        }
+        diagnosisForm = new FormDiagnosis(oqFileName, oqId, tableName, "origin: Before cluster expansion", webSocket, userId, mapNameToMask[oqFileName]);
+        connect(diagnosisForm, &FormDiagnosis::finished, this, &Analytics::state10);
+        delete (currentImage);
+        diagnosisForm->showFullScreen();
+    }
+    #else
+        state10();
+    #endif
+}
+
+
+void Analytics::on_btnClose_clicked(){
+
+    this->close();
+}
+
+void Analytics::state09(){
+
+    #if M_PROV
+    {
+        disconnect(diagnosisForm, &FormDiagnosis::finished, this, &Analytics::state09);
+        if (diagnosisForm != nullptr){
+            delete(diagnosisForm);
+            diagnosisForm = nullptr;
+        }
+    }
+    #endif
+
+    searchForm = new QueryParameters(oqId, tableName, oqFileName, webSocket, userId, oq, link, nullptr);
+    connect(searchForm, &QueryParameters::finished, this, &Analytics::on_btnClose_clicked);
+    searchForm->showFullScreen();
+}
+
+void Analytics::state10(){
+
+    #if M_PROV
+    {
+        disconnect(diagnosisForm, &FormDiagnosis::finished, this, &Analytics::state10);
+        if (diagnosisForm != nullptr){
+            delete(diagnosisForm);
+            diagnosisForm = nullptr;
+        }
+    }
+    #endif
+
     lockWidgets();
     MedicalImageTable newRSet;
     QString influencer, scopeAttributes;
@@ -1162,7 +1269,7 @@ void Analytics::on_btnSearchOi_clicked(){
                                         simAttribute,
                                         oq,
                                         newRSet,
-                                        Util::SIMILARITY_SEARCH,
+                                        Util::CLUSTER_EXPANSION_SEARCH,
                                         newRSet.size(),
                                         1,
                                         tableName,
@@ -1181,20 +1288,24 @@ void Analytics::on_btnSearchOi_clicked(){
     }
 }
 
-
-void Analytics::on_btnClose_clicked(){
-
-    this->close();
-}
-
 void Analytics::on_btnSearchOq_clicked(){
 
-    QueryParameters *searchForm = new QueryParameters(oqId, tableName, oqFileName, webSocket, userId, oq, link, nullptr);
-    searchForm->showFullScreen();
+    #if M_PROV
+    {
+        if (diagnosisForm != nullptr){
+            delete (diagnosisForm);
+        }
+        diagnosisForm = new FormDiagnosis(oqFileName, oqId, tableName, "origin: After checking Analytics", webSocket, userId, mapNameToMask[oqFileName]);
+        connect(diagnosisForm, &FormDiagnosis::finished, this, &Analytics::state09);
+        diagnosisForm->showFullScreen();
+    }
+    #else
+        state09();
+    #endif
 }
 
 void Analytics::on_btnPACS_clicked(){
 
-    QDesktopServices::openUrl(QUrl("https://www.dicomlibrary.com?study=" + link, QUrl::TolerantMode));
+    QDesktopServices::openUrl(QUrl((PACS_BASE_URL + link), QUrl::TolerantMode));
 }
 

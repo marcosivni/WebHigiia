@@ -84,6 +84,17 @@ QString ResultTable::fetchByColumn(int rowId, QString columnName){
     return answer;
 }
 
+QStringList ResultTable::fetchColumn(int columnId){
+
+    QStringList answer;
+
+    for (int x = 0; x < size(); x++){
+        answer.append(fetchByColumnId(x, columnId));
+    }
+
+    return answer;
+}
+
 int ResultTable::locateColumn(QString columnName){
 
     return Util::findColumn(columnName, caption);

@@ -57,7 +57,15 @@ QImage* Util::convertImageToQImage(Image *src){
             } else {
                 pp = (uint16_t) src->getPixel(x, y).getGrayPixelValue()/div;
             }
-            image->setPixel(x, y, qRgb(pp, pp, pp));
+            if ((src->getPixel(x, y).getRedPixelValue() != src->getPixel(x, y).getBluePixelValue()) || (src->getPixel(x, y).getGreenPixelValue() != src->getPixel(x, y).getBluePixelValue())){
+                image->setPixel(x, y,
+                                qRgb(
+                                    src->getPixel(x, y).getRedPixelValue(),
+                                    src->getPixel(x, y).getGreenPixelValue(),
+                                    src->getPixel(x, y).getBluePixelValue()));
+            } else {
+                image->setPixel(x, y, qRgb(pp, pp, pp));
+            }
         }
     }
 
@@ -86,47 +94,70 @@ Image* Util::openThumbnail(QString filename){
 }
 
 
-Image* Util::openImage(QString filename){
+Image* Util::openImage(QString filename, QString mask){
 
     filename = WFS_NAME + filename;
+    Image *answer = nullptr;
 
     try{
         //It handles jpg, bmp, png, krl and dicom through Artemis external library
         if (filename.split(".").last().toUpper() == "KRL"){
             KRLImage *img = new KRLImage(filename.toStdString());
-            return img;
+            answer = (Image*) img->clone();
+            delete (img);
         }
 
         if (filename.split(".").last().toUpper() == "PNG"){
             PNGImage *img = new PNGImage(filename.toStdString());
-            return img;
+            answer = (Image*) img->clone();
+            delete (img);
         }
 
         if (filename.split(".").last().toUpper() == "BMP"){
             BMPImage *img = new BMPImage(filename.toStdString());
-            return img;
+            answer = (Image*) img->clone();
+            delete (img);
         }
 
 
         if (filename.split(".").last().toUpper() == "JPG" || filename.split(".").last().toUpper() == ".JPEG"){
             JPGImage *img = new JPGImage(filename.toStdString());
-            return img;
+            answer = (Image*) img->clone();
+            delete (img);
         }
 
         //Extensionless files are interpreted as DICOM images...
         if (filename.split(".").last().toUpper() == "DCM" || filename.split(".").size() == 1){
             DCMImage *img = new DCMImage(filename.toStdString());
-            return img;
+            answer = (Image*) img->clone();
+            delete (img);
         }
     } catch (std::exception e) {
         //File not found or format not supported
-        return nullptr;
+        return answer;
     }
 
-    return nullptr;
+    //
+    if (mask.size()){
+        Image maskImage = uncompressMask(mask);
+        //Masking the original image
+        if ((answer->getWidth() == maskImage.getWidth()) && (answer->getHeight() == maskImage.getHeight())){
+            for (uint32_t x = 0; x < answer->getWidth(); x++){
+                for (uint32_t y = 0; y < answer->getHeight(); y++){
+                    if (maskImage.getPixel(x, y).getGrayPixelValue() == 255){
+                        Pixel p(247, 245, 58);
+                        //Pixel p(255, 19, 165);
+                        answer->setPixel(x, y, p);
+                    }
+                }
+            }
+        }
+    }
+    //
+    return answer;
 }
 
-void Util::saveImageAndThumbnailToFS(QString filename, QByteArray imgStream){
+void Util::saveImageAndThumbnailToFS(QString filename, QByteArray imgStream, QString mask){
 
 
     QFileInfo info(WFS_NAME + filename);
@@ -140,7 +171,8 @@ void Util::saveImageAndThumbnailToFS(QString filename, QByteArray imgStream){
     out << imgStream.toStdString();
     out.close();
 
-    Image *img = Util::openImage(filename);
+
+    Image *img = Util::openImage(filename, mask);
     if (!img->windowedPixels()){
         Image *bck = img->windowing(img->getWindowWidth(), img->getWindowCenter());
         delete (img);
@@ -154,7 +186,7 @@ void Util::saveImageAndThumbnailToFS(QString filename, QByteArray imgStream){
     delete (qimg);
 }
 
-void Util::saveImageAndThumbnailToFS(QString filename, QByteArray imgStream, QSize thumbSize){
+void Util::saveImageAndThumbnailToFS(QString filename, QByteArray imgStream, QSize thumbSize, QString mask){
 
     QFileInfo info(WFS_NAME + filename);
     QDir dir(info.dir().path());
@@ -167,7 +199,7 @@ void Util::saveImageAndThumbnailToFS(QString filename, QByteArray imgStream, QSi
     out << imgStream.toStdString();
     out.close();
 
-    Image *img = Util::openImage(filename);
+    Image *img = Util::openImage(filename, mask);
     if (!img->windowedPixels()){
         Image *bck = img->windowing(img->getWindowWidth(), img->getWindowCenter());
         delete (img);
@@ -216,5 +248,170 @@ void Util::print(QStringList list){
     for (int x = 0; x < list.size(); x++){
         std::cout << x << " - " << list.at(x).toStdString() << std::endl;
     }
+}
+
+std::string Util::serialize(std::string file){
+
+    std::string answer;
+    BMPImage *image = new BMPImage(file);
+    unsigned char *serialized = new unsigned char[sizeof(uint32_t) + sizeof(uint32_t) +  (sizeof(bool) * image->getWidth()*image->getHeight())];
+
+    uint32_t size = image->getWidth();
+    memcpy(serialized, &size, sizeof(uint32_t));
+    size = image->getHeight();
+    memcpy(serialized + sizeof(uint32_t), &size, sizeof(uint32_t));
+
+    for (uint32_t x = 0; x < image->getHeight(); x++){
+        for (uint32_t y = 0; y < image->getWidth(); y++){
+            bool aux = 0;
+            if (image->getPixel(y,x).getGrayPixelValue() == 255){
+                aux = 1;
+            }
+            memcpy(serialized + (2*sizeof(uint32_t))+(sizeof(bool)*((x*image->getWidth()) + y)), &aux, sizeof(bool));
+        }
+    }
+
+    for (unsigned long x = 0; x < sizeof(uint32_t) + sizeof(uint32_t) +  (sizeof(bool)*image->getWidth()*image->getHeight()); x++){
+        answer += serialized[x];
+    }
+
+    delete[] (serialized);
+    delete (image);
+
+    return answer;
+}
+
+Image Util::unserialize(std::string dataIn){
+
+    uint32_t w, h;
+    bool *d;
+
+    memcpy(&w, dataIn.c_str(), sizeof(uint32_t));
+    memcpy(&h, dataIn.c_str() + sizeof(uint32_t), sizeof(uint32_t));
+
+    Image bmp;
+    bmp.createPixelMatrix(w, h);
+
+    d = new bool[w*h];
+    for (uint32_t x = 0; x < bmp.getHeight(); x++){
+        for (uint32_t y = 0; y < bmp.getWidth(); y++){
+            memcpy(&d[(x*bmp.getWidth()) + y], dataIn.c_str() + sizeof(uint32_t) + sizeof(uint32_t) + (sizeof(bool)*( (x*bmp.getWidth()) + y)), sizeof(bool));
+            Pixel p;
+            if (d[(x*bmp.getWidth()) + y]){
+                p.setGrayPixelValue(255);
+                //p.setRGBPixelValue(255, 19, 165);
+                //p.setRGBPixelValue(255, 255, 0);
+            }
+            bmp.setPixel(y, x, p);
+        }
+    }
+
+    delete[] (d);
+
+    return bmp;
+}
+
+QString Util::readAndCompressMask(std::string file){
+
+    std::string s = serialize(file);
+    QString conversor = FeatureVector::toBase64(s).c_str();
+    QByteArray byteArray(conversor.toUtf8());
+    byteArray = qCompress(byteArray, 9);
+    QString zipStr = QString::fromUtf8(byteArray.toBase64().data(), byteArray.toBase64().size());
+
+    return zipStr;
+}
+
+
+Image Util::uncompressMask(QString zipStr){
+
+    QByteArray byteArray = QByteArray::fromBase64(QByteArray(zipStr.toUtf8()));
+    QString result;
+    std::string answer;
+
+    byteArray = qUncompress(byteArray);
+
+    result = QString::fromUtf8(byteArray.data(), byteArray.size());
+    answer = FeatureVector::fromBase64(result.toStdString());
+    return unserialize(answer);
+}
+
+
+QString Util::mostFrequentValue(QStringList valuesIn){
+
+    //Histogram <value, frequency>
+    std::vector<QString> values;
+    std::vector<uint16_t> frequencies;
+
+    QString prediction = "Empty!";
+    double maxFrequency = 0.0;
+
+    //Build a histogram by scanning the result set...
+    for (int i = 0; i < valuesIn.size(); i++){
+        QString value = valuesIn.at(i);
+        bool found = false;
+        for (size_t itV = 0; ((!found) && (itV < values.size())); itV++){
+            found = (value.toStdString() == values[itV].toStdString());
+            if (found){
+                frequencies[itV]++;
+            }
+        }
+        if (!found){
+            values.push_back(value);
+            frequencies.push_back(1);
+        }
+    }
+
+    for (size_t k = 0; k < values.size(); k++){
+        if (maxFrequency < frequencies[k]){
+            maxFrequency = frequencies[k];
+            prediction = values[k];
+        }
+    }
+
+    values.clear();
+    frequencies.clear();
+
+    return prediction;
+}
+
+double Util::highestFrequencyPercent(QStringList valuesIn){
+
+    //Histogram <value, frequency>
+    std::vector<QString> values;
+    std::vector<uint16_t> frequencies;
+
+    double sumFrequency, maxFrequency, answer;
+    sumFrequency = maxFrequency = answer = 0.0;
+
+    //Build a histogram by scanning the result set...
+    for (int i = 0; i < valuesIn.size(); i++){
+        QString value = valuesIn.at(i);
+        bool found = false;
+        for (size_t itV = 0; ((!found) && (itV < values.size())); itV++){
+            found = (value.toStdString() == values[itV].toStdString());
+            if (found){
+                frequencies[itV]++;
+            }
+        }
+        if (!found){
+            values.push_back(value);
+            frequencies.push_back(1);
+        }
+    }
+
+    for (size_t k = 0; k < values.size(); k++){
+        if (maxFrequency < frequencies[k]){
+            maxFrequency = frequencies[k];
+        }
+        sumFrequency += frequencies[k];
+    }
+    values.clear();
+    frequencies.clear();
+
+    if (sumFrequency > 0){
+        answer = maxFrequency/sumFrequency;
+    }
+    return answer;
 }
 

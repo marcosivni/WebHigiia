@@ -14,13 +14,18 @@
 #include <QMultiMap>
 
 
-//Higiia includes
+//WebHigiia includes
 #include <QPushButtonAlter.h>
 #include <Util.h>
 #include <ScopeCaption.h>
 #include <WindowingInterval.h>
 #include <MedicalImageTable.h>
 #include <SirenSqlQuery.h>
+
+//Provenance-related stuff
+#if M_PROV
+    #include <HC_FormDiagnosis.h>
+#endif
 
 namespace Ui {
     class OberonViewer;
@@ -46,8 +51,9 @@ class OberonViewer : public QMainWindow { Q_OBJECT
         // - temp: Swap for splitting influencers and influenced images
         MedicalImageTable rSet, rInfset, tempRInfset;
         //Search attributes (required for relevance feedback cycles)
-        QString simAttribute, tableName, oqFileName, scopeAttributes, vTableName, metricName;
+        QString simAttribute, tableName, oqFileName, scopeAttributes, vTableName, metricName, userId;
         FeatureVector oq;
+        uint32_t oqId;
         bool vTable;
         //Mapper rSet -> rInfSet
         QMultiMap<uint16_t, uint16_t> mapInfluencedRows;
@@ -78,8 +84,19 @@ class OberonViewer : public QMainWindow { Q_OBJECT
         //Viewing info
         QString link, kBridge;
 
+        //Mask stuff
+        std::map<QString, QString> mapNameToMask;
+
+        //Provenance-related stuff
+        #if M_PROV
+            FormDiagnosis *diagnosisForm;
+        #endif
+
     private:
         //Auxiliary methods for loading images into the file system
+        void downloadOqMask();
+        void downloadNonInfluencedMasks();
+        void downloadInfluencedMasks();
         void downloadOq();
         void downloadNonInfluencedImages();
         void loadInfluencedImages();
@@ -116,6 +133,14 @@ class OberonViewer : public QMainWindow { Q_OBJECT
         void state06(QByteArray message);
         void state07(QByteArray message);
 
+        //State machine slots for masks
+        void state08(QByteArray message);
+        void state09(QByteArray message);
+        void state10(QByteArray message);
+
+        //State-machine for provenance stuff
+        void state11();
+        void state12();
 
         //Slots for user-interaction
         void unRelevantImageClickedRight();
@@ -139,6 +164,9 @@ class OberonViewer : public QMainWindow { Q_OBJECT
         void on_sliderWidth_sliderReleased();
         void on_cbxWindowing_currentIndexChanged(int index);
         void on_btnPACS_clicked();
+
+    signals:
+        void finished();
 
     public:
         explicit OberonViewer(bool vTable,

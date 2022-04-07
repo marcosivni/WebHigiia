@@ -31,6 +31,7 @@ class ResultTable{
         QString fetchTupleByRowId(int rowId);
         QString fetchByColumnId(int rowId, int columnId);
         QString fetchByColumn(int rowId, QString columnName);
+        QStringList fetchColumn(int columnId);
 
         int locateColumn(QString columnName);
         int locateFirstRow(QString value, int columnId);

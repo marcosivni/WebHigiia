@@ -13,12 +13,19 @@
 #include <QRegularExpression>
 #include <QUrl>
 
-//Higiia includes
+//WebHigiia includes
 #include <MedicalImageTable.h>
 #include <SirenSqlQuery.h>
 #include <QueryParameters.h>
 #include <OberonViewer.h>
 #include <Analytics.h>
+
+
+//Provenance-related stuff
+#if M_PROV
+    #include <HC_FormDiagnosis.h>
+#endif
+
 
 namespace Ui {
     class UnreportedStudies;
@@ -31,8 +38,16 @@ class UnreportedStudies : public QMainWindow{ Q_OBJECT
         Ui::UnreportedStudies *ui;
         QWebSocket *webSocket;
         MedicalImageTable records;
-        QString userId, scope;
+        QString userId, scope, tableName, attName, numberK, clusterSize;
         FeatureVector oq;
+
+        //Mask stuff
+        std::map<QString, QString> mapNameToMask;
+
+        //Provenance-related stuff
+        #if M_PROV
+            FormDiagnosis *diagnosisForm;
+        #endif
 
 
     private:
@@ -51,13 +66,15 @@ class UnreportedStudies : public QMainWindow{ Q_OBJECT
 
     public slots:
         void state01(QByteArray message);
-        void state02(QByteArray message);
+        void state02();
+        void state03();
         void state04(QByteArray message);
         void state05();
         void state06(QByteArray message);
-        void state07();
+        void state07(QByteArray message);
         void state08(QByteArray message);
         void state09(QByteArray message);
+        void state10();
 
     protected:
         void changeEvent(QEvent *e);

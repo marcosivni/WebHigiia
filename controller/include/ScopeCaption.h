@@ -22,7 +22,7 @@ class ScopeCaption{
         void addEntry(QString const &attName, QString const &valueName, QString const &captionName);
 
         bool findCaption(QString const &attName, QString const &valueName, std::string *captionValue = nullptr);
-        QString findCaption(QString const &attName, QString const &valueName);
+        QString matchCaption(QString const &attName, QString const &valueName);
 
         QString generateSQLBaseQuery(QString const &tableName);
 

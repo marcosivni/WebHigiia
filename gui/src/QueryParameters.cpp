@@ -37,6 +37,8 @@ QueryParameters::QueryParameters(int32_t studyId, QString tableName, QString ima
     this->oq = oq;
     this->link = link;
 
+    oberonViewer = nullptr;
+
     //Locking widgets...
     lockWidgets();
     ui->lblServerSetup->setText("Requesting, please wait ...");
@@ -73,6 +75,10 @@ void QueryParameters::unlockWidgets(){
 
 QueryParameters::~QueryParameters(){
 
+    if (oberonViewer != nullptr){
+        delete (oberonViewer);
+    }
+    oberonViewer = nullptr;
     delete ui;
 }
 
@@ -282,7 +288,7 @@ void QueryParameters::state05(QByteArray message){
     MedicalImageTable rSet(Util::toStringList(message.split('\n')));
 
     if (rSet.size()){
-        OberonViewer *oberonViewer = new OberonViewer(ui->cbxHypothesis->currentIndex(),
+        oberonViewer = new OberonViewer(ui->cbxHypothesis->currentIndex(),
                                                       scopeAttributes,
                                                       tableName,
                                                       filename,
@@ -299,6 +305,7 @@ void QueryParameters::state05(QByteArray message){
                                                       userId,
                                                       link,
                                                       nullptr);
+        connect(oberonViewer, &OberonViewer::finished, this, &QueryParameters::state06);
         oberonViewer->showFullScreen();
     } else {
         ui->lblServerSetup->setText("Empty result set!");
@@ -310,6 +317,13 @@ void QueryParameters::state05(QByteArray message){
     unlockWidgets();
 }
 
+void QueryParameters::state06(){
+
+    disconnect(oberonViewer, &OberonViewer::finished, this, &QueryParameters::state06);
+    emit finished();
+    on_btnClose_clicked();
+}
+
 void QueryParameters::on_btnClose_clicked(){
 
     this->close();
@@ -317,6 +331,6 @@ void QueryParameters::on_btnClose_clicked(){
 
 void QueryParameters::on_btnPACS_clicked(){
 
-    QDesktopServices::openUrl(QUrl("https://www.dicomlibrary.com?study=" + link, QUrl::TolerantMode));
+    QDesktopServices::openUrl(QUrl(PACS_BASE_URL + link, QUrl::TolerantMode));
 }
 

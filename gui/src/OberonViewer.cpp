@@ -35,12 +35,19 @@ OberonViewer::OberonViewer(bool vTable,
     this->vTableName = vTableName;
     this->metricName = metricName;
     this->link = link;
+    this->oqId = oqId;
+    this->userId = QString::number(userId);
 
     ui->txtKnn->setText(QString::number(k));
     this->kBridge = QString::number(kBridge);
 
     currentImage = nullptr;
     queryImage = nullptr;
+
+    //Provenance-related stuff
+    #if M_PROV
+        diagnosisForm = nullptr;
+    #endif
 
 
     ui->lblServerSetup->setText("Loading, please wait ...");
@@ -74,8 +81,8 @@ void OberonViewer::splitResultSets(){
     ui->lytCentral->setEnabled(false);
 
     //In-memory FS for WASM - File sync finishes at state 04
-    if (searchType == Util::SIMILARITY_SEARCH || searchType == Util::DIVERSITY_SEARCH){
-        downloadNonInfluencedImages();
+    if (searchType == Util::SIMILARITY_SEARCH || searchType == Util::CLUSTER_EXPANSION_SEARCH || searchType == Util::DIVERSITY_SEARCH){
+        downloadNonInfluencedMasks();
     } else {
         loadInfluencedImages();
     }
@@ -83,7 +90,18 @@ void OberonViewer::splitResultSets(){
 
 void OberonViewer::fillThumbnails(){
 
-    currentImage = Util::openImage(oqFileName);
+    int posClass = rSet.locateColumn("Image_Class");
+    //<html><head/><body><p align="center"><br/></p></body></html>
+    //Sanity-check only
+    if (posClass != -1){
+        QStringList labels = rSet.fetchColumn(posClass);
+        ui->lblClassification->setText("<html><head/><body><p align=\"center\">" +
+                                       scopeCaption.matchCaption("Image_Class", Util::mostFrequentValue(labels).simplified()) + " (" +
+                                       QString::number(Util::highestFrequencyPercent(labels)*100.0, 'f', 2) + "%)" +
+                                       "</body></html>");
+    }
+
+    currentImage = Util::openImage(oqFileName, mapNameToMask[oqFileName]);
     adjustSliders();
     fillQueryCenter(currentImage);
     if (!currentImage->windowedPixels()){
@@ -91,7 +109,7 @@ void OberonViewer::fillThumbnails(){
     }
     queryImage = currentImage;
 
-    if (searchType == Util::SIMILARITY_SEARCH || searchType == Util::DIVERSITY_SEARCH){
+    if (searchType == Util::SIMILARITY_SEARCH || searchType == Util::CLUSTER_EXPANSION_SEARCH  || searchType == Util::DIVERSITY_SEARCH){
         //Single result set
         loadThumbnailsRight(rSet);
     } else {
@@ -167,7 +185,7 @@ void OberonViewer::loadInfluencedImages(){
         connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state02);
         webSocket->sendBinaryMessage(queryT.generateQuery().toStdString().c_str());
     } else {
-        downloadInfluencedImages();
+        downloadInfluencedMasks();
     }
 }
 
@@ -223,7 +241,7 @@ void OberonViewer::state02(QByteArray message){
         connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state02);
         webSocket->sendBinaryMessage(queryT.generateQuery().toStdString().c_str());
     } else {
-        downloadInfluencedImages();
+        downloadInfluencedMasks();
     }
 }
 
@@ -252,7 +270,7 @@ void OberonViewer::downloadInfluencedImages(){
         ui->lblServerSetup->setText("Downloading " + QString::number(counterImgsDownPanel) + "/" + QString::number(rInfset.size())+ ", please wait ...");
         webSocket->sendBinaryMessage(request.toStdString().c_str());
     } else {
-        downloadNonInfluencedImages();
+        downloadNonInfluencedMasks();
     }
 }
 
@@ -267,7 +285,7 @@ void OberonViewer::state03(QByteArray message){
     QString filename = rInfset.fetchByColumnId(counterImgsDownPanel, posImg);
 
     if (!filename.toStdString().empty()){
-        Util::saveImageAndThumbnailToFS(filename, message);
+        Util::saveImageAndThumbnailToFS(filename, message, mapNameToMask[filename]);
         mapOidToNames[rInfset.fetchByColumnId(counterImgsDownPanel, posId).toUInt()] = filename.toStdString();
     } else {
         ui->lblServerSetup->setText("Local storage fatal error.");
@@ -287,8 +305,62 @@ void OberonViewer::state03(QByteArray message){
         ui->lblServerSetup->setText("Downloading " + QString::number(counterImgsDownPanel) + "/" + QString::number(rInfset.size())+ ", please wait ...");
         webSocket->sendBinaryMessage(request.toStdString().c_str());
     } else {
-        downloadNonInfluencedImages();
+        downloadNonInfluencedMasks();
     }
+}
+
+void OberonViewer::downloadNonInfluencedMasks(){
+
+    QStringList ids;
+    for (int x = 0; x < rSet.size(); x++){
+        ids.append(rSet.fetchByColumnId(x, rSet.locateImageID()));
+    }
+
+
+    SirenSQLQuery buildMaskStatement;
+    buildMaskStatement.addProjectionAttribute("Id, Mask");
+    buildMaskStatement.addTable(tableName);
+
+    QString inList = "Id IN (";
+    for (int x = 0; x < ids.size(); x++){
+        if (x > 0){
+            inList.append(", ");
+        }
+        inList.append(ids[x]);
+    }
+    inList.append(" )");
+    buildMaskStatement.addWhereAttribute(inList);
+
+    ui->lblServerSetup->setText("Loading masks, please wait ...");
+    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state09);
+    webSocket->sendBinaryMessage(buildMaskStatement.generateQuery().toStdString().c_str());
+}
+
+void OberonViewer::downloadInfluencedMasks(){
+
+    QStringList ids;
+    for (int x = 0; x < rInfset.size(); x++){
+        ids.append(rInfset.fetchByColumnId(x, rInfset.locateImageID()));
+    }
+
+
+    SirenSQLQuery buildMaskStatement;
+    buildMaskStatement.addProjectionAttribute("Id, Mask");
+    buildMaskStatement.addTable(tableName);
+
+    QString inList = "Id IN (";
+    for (int x = 0; x < ids.size(); x++){
+        if (x > 0){
+            inList.append(", ");
+        }
+        inList.append(ids[x]);
+    }
+    inList.append(" )");
+    buildMaskStatement.addWhereAttribute(inList);
+
+    ui->lblServerSetup->setText("Loading masks, please wait ...");
+    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state10);
+    webSocket->sendBinaryMessage(buildMaskStatement.generateQuery().toStdString().c_str());
 }
 
 void OberonViewer::downloadNonInfluencedImages(){
@@ -312,7 +384,7 @@ void OberonViewer::downloadNonInfluencedImages(){
         ui->lblServerSetup->setText("Downloading " + QString::number(counterImgsRightPanel) + "/" + QString::number(rSet.size())+ ", please wait ...");
         webSocket->sendBinaryMessage(request.toStdString().c_str());
     } else {
-        downloadOq();
+        downloadOqMask();
     }
 }
 
@@ -329,7 +401,7 @@ void OberonViewer::state04(QByteArray message){
 
     filename = rSet.fetchByColumnId(counterImgsRightPanel, posImg);
     if (!filename.toStdString().empty()){
-        Util::saveImageAndThumbnailToFS(filename, message);
+        Util::saveImageAndThumbnailToFS(filename, message, mapNameToMask[filename]);
         mapOidToNames[rSet.fetchByColumnId(counterImgsRightPanel, posId).toUInt()] = filename.toStdString();
     } else {
         ui->lblServerSetup->setText("Local storage fatal error.");
@@ -349,8 +421,21 @@ void OberonViewer::state04(QByteArray message){
         ui->lblServerSetup->setText("Downloading " + QString::number(counterImgsRightPanel) + "/" + QString::number(rSet.size())+ ", please wait ...");
         webSocket->sendBinaryMessage(request.toStdString().c_str());
     } else {
-        downloadOq();
+        downloadOqMask();
     }
+}
+
+void OberonViewer::downloadOqMask(){
+
+    SirenSQLQuery buildMaskStatement;
+
+    buildMaskStatement.addProjectionAttribute("Id, Mask");
+    buildMaskStatement.addTable("U_" + tableName);
+    buildMaskStatement.addWhereAttribute("Id = " + QString::number(oqId));
+
+    ui->lblServerSetup->setText("Loading masks, please wait ...");
+    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state08);
+    webSocket->sendBinaryMessage(buildMaskStatement.generateQuery().toStdString().c_str());
 }
 
 void OberonViewer::downloadOq(){
@@ -377,7 +462,7 @@ void OberonViewer::state05(QByteArray message){
     ui->lblServerSetup->setText("Saving file, please wait ...");
 
     if (!oqFileName.toStdString().empty()){
-        Util::saveImageAndThumbnailToFS(oqFileName, message);
+        Util::saveImageAndThumbnailToFS(oqFileName, message, mapNameToMask[oqFileName]);
     } else {
         ui->lblServerSetup->setText("Local storage fatal error.");
     }
@@ -518,9 +603,9 @@ void OberonViewer::fillQueryCenter(Image *src, uint32_t scale){
     if(queryImage == nullptr){
         if (!src->windowedPixels()){
             Image *aux = src->windowing(src->getWindowWidth(), src->getWindowCenter());
-            delete (img);
-            img  = Util::convertImageToQImage(aux);
-            delete (aux);
+            delete(img);
+            img = Util::convertImageToQImage(aux);
+            delete(aux);
         }
         QIcon ico;
         ico.addPixmap(QPixmap::fromImage(img->scaled(200, 200)));
@@ -543,7 +628,7 @@ void OberonViewer::changeCenterImage(){
     }
 
     std::string imageName = mapOidToNames[x];
-    currentImage = Util::openImage(imageName.c_str());
+    currentImage = Util::openImage(imageName.c_str(), mapNameToMask[imageName.c_str()]);
 
     //Reset windowing settings
     ui->cbxWindowing->setCurrentIndex(0);
@@ -879,6 +964,7 @@ OberonViewer::~OberonViewer(){
         }
     }
     mapOidToNames.clear();
+    mapNameToMask.clear();
 
     delete (ui);
 }
@@ -912,7 +998,22 @@ void OberonViewer::on_btnZoomIn_clicked(){
 
 void OberonViewer::on_btnExit_clicked(){
 
-    this->close();
+    #if M_PROV
+    {
+        if (searchType != Util::CLUSTER_EXPANSION_SEARCH){
+            if (diagnosisForm != nullptr){
+                delete (diagnosisForm);
+            }
+            diagnosisForm = new FormDiagnosis(oqFileName, oqId, tableName, "origin: Final Diagnosis", webSocket, userId.toInt(), mapNameToMask[oqFileName]);
+            connect(diagnosisForm, &FormDiagnosis::finished, this, &OberonViewer::state12);
+            diagnosisForm->showFullScreen();
+        } else {
+            state12();
+        }
+    }
+    #else
+        state12();
+    #endif
 }
 
 
@@ -950,7 +1051,7 @@ void OberonViewer::on_btnPDF_clicked(){
     printer.setOutputFileName(fileName);
 
     QPainter painter(&printer);
-    painter.drawText(0, 0, "Exported DICOM image provided by CBMIR Higiia.");
+    painter.drawText(0, 0, "WebHigiia - Exported DICOM image.");
     painter.drawPixmap(0, 400, 8000, 8000, ui->lblCenter->pixmap()->scaled(8000, 8000));
     painter.end();
 
@@ -1119,80 +1220,22 @@ void OberonViewer::on_btnFeedback_clicked(){
         return;
     }
 
-    std::vector<uint32_t> relevants;
-    QString tblName, condition, sqlQuery;
-    SirenSQLQuery buildRelevants, buildNonRelevants;
-
-    for (int x = 0; x < ui->gridLayout_5->count(); x++){
-        QLayoutItem * const item = ui->gridLayout_5->itemAt(x);
-        if (item->widget()->windowTitle().toStdString() == "1"){
-            relevants.push_back(item->widget()->whatsThis().toUInt());
+    #if M_PROV
+    {
+        if (diagnosisForm != nullptr){
+            delete (diagnosisForm);
         }
-    }
-
-    if (relevants.empty() && removedListOfIds.empty()){
-        ui->lblServerSetup->setText("Invalid search parameters!");
-        return;
-    }
-
-    ui->lblServerSetup->setText("Cycling, please wait...");
-
-    //Lock screen widgets...
-    ui->tabWidget->hide();
-    ui->lytCentral->setEnabled(false);
-
-    if (vTable){
-        tblName = "temp";
-    } else {
-        tblName = tableName;
-    }
-    if (!relevants.empty()){
-        buildRelevants.addProjectionList( {"rf$PPV$" + tableName + "_"+ simAttribute + "."+ simAttribute, "'0' "});
-        if (vTable){
-            buildRelevants.addTable("( " + vTableName + " ) AS " + tblName);
+        if (searchType == Util::CLUSTER_EXPANSION_SEARCH){
+            diagnosisForm = new FormDiagnosis(oqFileName, oqId, tableName, "origin: Before Cluster Feedback Cycle", webSocket, userId.toInt(), mapNameToMask[oqFileName]);
         } else {
-            buildRelevants.addTable(tableName);
+            diagnosisForm = new FormDiagnosis(oqFileName, oqId, tableName, "origin: Before Feedback Cycle", webSocket, userId.toInt(), mapNameToMask[oqFileName]);
         }
-        buildRelevants.addJoin("PPV$" + tableName + "_"+ simAttribute + " AS rf$PPV$" + tableName + "_"+ simAttribute, "rf$PPV$" + tableName + "_"+ simAttribute + "." + simAttribute + "_id = " + tblName + "." + simAttribute);
-        condition = tblName + ".Id IN ( ";
-        for (size_t x = 0; x < relevants.size(); x++){
-            if (x > 0){
-                condition += ", ";
-            }
-            condition += QString::number(relevants[x]);
-        }
-        condition += ") ";
-        buildRelevants.addWhereAttribute(condition);
-        sqlQuery = buildRelevants.generateQuery();
+        connect(diagnosisForm, &FormDiagnosis::finished, this, &OberonViewer::state11);
+        diagnosisForm->showFullScreen();
     }
-
-    if (!removedListOfIds.empty() && !relevants.empty()){
-        sqlQuery += "UNION ";
-    }
-
-    if (!removedListOfIds.empty()){
-        buildNonRelevants.addProjectionList( {"rf$PPV$" + tableName + "_"+ simAttribute + "."+ simAttribute, "'1' "});
-        if (vTable){
-            buildNonRelevants.addTable("( " + vTableName + " ) AS " + tblName);
-        } else {
-            buildNonRelevants.addTable(tableName);
-        }
-        buildNonRelevants.addJoin("PPV$" + tableName + "_"+ simAttribute + " AS rf$PPV$" + tableName + "_"+ simAttribute, "rf$PPV$" + tableName + "_"+ simAttribute + "." + simAttribute + "_id = " + tblName + "." + simAttribute);
-        condition = tblName + ".Id IN ( ";
-        for (size_t x = 0; x < removedListOfIds.size(); x++){
-            if (x > 0){
-                condition += ", ";
-            }
-            condition += QString::number(removedListOfIds[x]);
-        }
-        condition += ")";
-        buildNonRelevants.addWhereAttribute(condition);
-        sqlQuery = buildNonRelevants.generateQuery();
-    }
-    relevants.clear();
-
-    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state06);
-    webSocket->sendBinaryMessage(sqlQuery.toStdString().c_str());
+    #else
+        state11();
+    #endif
 }
 
 
@@ -1276,7 +1319,7 @@ void OberonViewer::state06(QByteArray message){
         queryT.addTable(tblName);
     }
     condition += tblName +"."+ simAttribute;
-    if (searchType == Util::SIMILARITY_SEARCH){
+    if (searchType == Util::SIMILARITY_SEARCH || searchType == Util::CLUSTER_EXPANSION_SEARCH ){
         condition += " NEAR ";
     } else {
         if (searchType == Util::DIVERSITY_SEARCH){
@@ -1303,6 +1346,7 @@ void OberonViewer::state07(QByteArray message){
 
     //Clear current variables, including result sets ...
     ui->lblServerSetup->setText("Rebuilding, please wait ...");
+    ui->lblDetails->clear();
     clearAllThumbnails();
     clearResultSets();
     mapInfluencedRows.clear();
@@ -1331,6 +1375,164 @@ void OberonViewer::state07(QByteArray message){
     splitResultSets();
 }
 
+void OberonViewer::state08(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state08);
+
+    ResultTable masks(Util::toStringList(message.split('\n')));
+
+    if (masks.size()){
+        mapNameToMask[oqFileName] = masks.fetchByColumnId(0, masks.locateColumn("Mask"));
+    }
+
+    downloadOq();
+}
+
+void OberonViewer::state09(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state09);
+
+    int posId, posMask;
+    ResultTable masks(Util::toStringList(message.split('\n')));
+
+    if (masks.size()){
+        posId = masks.locateColumn("Id");
+        posMask = masks.locateColumn("Mask");
+
+        //Load and map image masks
+        for (int x = 0; x < masks.size(); x++){
+            QString filename = rSet.fetchByColumnId(rSet.locateFirstRow(masks.fetchByColumnId(x, posId), rSet.locateImageID()), rSet.locateImageFilename());
+            mapNameToMask[filename] = masks.fetchByColumnId(x, posMask);
+        }
+    }
+    downloadNonInfluencedImages();
+}
+
+void OberonViewer::state10(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state10);
+
+    int posId, posMask;
+    ResultTable masks(Util::toStringList(message.split('\n')));
+
+    if (masks.size()){
+        posId = masks.locateColumn("Id");
+        posMask = masks.locateColumn("Mask");
+
+        //Load and map image masks
+        for (int x = 0; x < masks.size(); x++){
+            QString filename = rInfset.fetchByColumnId(rInfset.locateFirstRow(masks.fetchByColumnId(x, posId), rInfset.locateImageID()), rInfset.locateImageFilename());
+            mapNameToMask[filename] = masks.fetchByColumnId(x, posMask);
+        }
+    }
+    downloadInfluencedImages();
+}
+
+void OberonViewer::state11(){
+
+    #if M_PROV
+    {
+        disconnect(diagnosisForm, &FormDiagnosis::finished, this, &OberonViewer::state11);
+        if (diagnosisForm != nullptr){
+            delete(diagnosisForm);
+            diagnosisForm = nullptr;
+        }
+    }
+    #endif
+
+    std::vector<uint32_t> relevants;
+    QString tblName, condition, sqlQuery;
+    SirenSQLQuery buildRelevants, buildNonRelevants;
+
+    for (int x = 0; x < ui->gridLayout_5->count(); x++){
+        QLayoutItem * const item = ui->gridLayout_5->itemAt(x);
+        if (item->widget()->windowTitle().toStdString() == "1"){
+            relevants.push_back(item->widget()->whatsThis().toUInt());
+        }
+    }
+
+    if (relevants.empty() && removedListOfIds.empty()){
+        ui->lblServerSetup->setText("Invalid search parameters!");
+        return;
+    }
+
+    ui->lblServerSetup->setText("Cycling, please wait...");
+
+    //Lock screen widgets...
+    ui->tabWidget->hide();
+    ui->lytCentral->setEnabled(false);
+
+    if (vTable){
+        tblName = "temp";
+    } else {
+        tblName = tableName;
+    }
+    if (!relevants.empty()){
+        buildRelevants.addProjectionList( {"rf$PPV$" + tableName + "_"+ simAttribute + "."+ simAttribute, "'0' "});
+        if (vTable){
+            buildRelevants.addTable("( " + vTableName + " ) AS " + tblName);
+        } else {
+            buildRelevants.addTable(tableName);
+        }
+        buildRelevants.addJoin("PPV$" + tableName + "_"+ simAttribute + " AS rf$PPV$" + tableName + "_"+ simAttribute, "rf$PPV$" + tableName + "_"+ simAttribute + "." + simAttribute + "_id = " + tblName + "." + simAttribute);
+        condition = tblName + ".Id IN ( ";
+        for (size_t x = 0; x < relevants.size(); x++){
+            if (x > 0){
+                condition += ", ";
+            }
+            condition += QString::number(relevants[x]);
+        }
+        condition += ") ";
+        buildRelevants.addWhereAttribute(condition);
+        sqlQuery = buildRelevants.generateQuery();
+    }
+
+    if (!removedListOfIds.empty() && !relevants.empty()){
+        sqlQuery += "UNION ";
+    }
+
+    if (!removedListOfIds.empty()){
+        buildNonRelevants.addProjectionList( {"rf$PPV$" + tableName + "_"+ simAttribute + "."+ simAttribute, "'1' "});
+        if (vTable){
+            buildNonRelevants.addTable("( " + vTableName + " ) AS " + tblName);
+        } else {
+            buildNonRelevants.addTable(tableName);
+        }
+        buildNonRelevants.addJoin("PPV$" + tableName + "_"+ simAttribute + " AS rf$PPV$" + tableName + "_"+ simAttribute, "rf$PPV$" + tableName + "_"+ simAttribute + "." + simAttribute + "_id = " + tblName + "." + simAttribute);
+        condition = tblName + ".Id IN ( ";
+        for (size_t x = 0; x < removedListOfIds.size(); x++){
+            if (x > 0){
+                condition += ", ";
+            }
+            condition += QString::number(removedListOfIds[x]);
+        }
+        condition += ")";
+        buildNonRelevants.addWhereAttribute(condition);
+        sqlQuery = buildNonRelevants.generateQuery();
+    }
+    relevants.clear();
+
+    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &OberonViewer::state06);
+    webSocket->sendBinaryMessage(sqlQuery.toStdString().c_str());
+}
+
+void OberonViewer::state12(){
+
+    #if M_PROV
+    {
+        if (searchType != Util::CLUSTER_EXPANSION_SEARCH){
+            disconnect(diagnosisForm, &FormDiagnosis::finished, this, &OberonViewer::state12);
+            if (diagnosisForm != nullptr){
+                delete(diagnosisForm);
+                diagnosisForm = nullptr;
+            }
+        }
+    }
+    #endif
+
+    emit finished();
+    this->close();
+}
 
 void OberonViewer::on_cbxWindowing_currentIndexChanged(int index){
 
@@ -1340,6 +1542,6 @@ void OberonViewer::on_cbxWindowing_currentIndexChanged(int index){
 
 void OberonViewer::on_btnPACS_clicked(){
 
-    QDesktopServices::openUrl(QUrl("https://www.dicomlibrary.com?study=" + link, QUrl::TolerantMode));
+    QDesktopServices::openUrl(QUrl(PACS_BASE_URL + link, QUrl::TolerantMode));
 }
 

@@ -17,7 +17,7 @@
 #include <QtGui/QPainter>
 #include <QtCore/QtMath>
 
-//Higiia includes
+//WebHigiia includes
 #include <Util.h>
 #include <MedicalImageTable.h>
 #include <QueryParameters.h>
@@ -25,6 +25,11 @@
 //Eigen includes
 #include <Eigen/Sparse>
 #include <Eigen/Eigenvalues>
+
+//Provenance-related stuff
+#if M_PROV
+    #include <HC_FormDiagnosis.h>
+#endif
 
 
 namespace Ui {
@@ -45,6 +50,7 @@ class Analytics : public QMainWindow {
         QStringList scopeAtts;
         Util::SEARCH_TYPE searchType;
         int counterImgs, iteratorRSet;
+        QueryParameters *searchForm;
 
         //Mapper rSet -> rInfSet
         QMultiMap<uint16_t, uint16_t> mapInfluencedRows;
@@ -68,13 +74,23 @@ class Analytics : public QMainWindow {
         int32_t oqId, userId;
         QString link;
 
+        //Mask-stuff
+        std::map<QString, QString> mapNameToMask;
+
+        //Provenance-related stuff
+        #if M_PROV
+            FormDiagnosis *diagnosisForm;
+        #endif
+
     private:
         std::vector<std::pair<double, double>> spiral(const uint16_t N, double *farthestInAxis = nullptr);
         double L2Distance(QPointF p1, QPointF p2);
 
         void loadScope();
         void loadInfluencedImages();
+        void donwloadNonInfluencedMasks();
         void downloadNonInfluencedImages();
+        void downloadOqMask();
         void downloadOq();
         void fillQueryData();
         void fillNeighborImage(int rSetRowId);
@@ -90,6 +106,14 @@ class Analytics : public QMainWindow {
         void state04(QByteArray message);
         void state05(QByteArray message);
         void state06(QByteArray message);
+
+        //State-machine for loading mask stuff
+        void state07(QByteArray message);
+        void state08(QByteArray message);
+
+        //State-machine for provenance stuff
+        void state09();
+        void state10();
 
         //Build data for UI components
         QString buildOqScope();

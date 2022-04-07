@@ -32,32 +32,74 @@ UnreportedStudies::UnreportedStudies(QWebSocket *webSocket, const int userId, QW
     this->webSocket = webSocket;
     ui->txtSearchPatient->setFocus();
 
+    //Provenance-related stuff
+    #if M_PROV
+        diagnosisForm = nullptr;
+    #endif
+
     //Load studies data
     loadStudyTable(userId);
 }
 
 UnreportedStudies::~UnreportedStudies(){
 
+    mapNameToMask.clear();
     delete ui;
 }
 
 
 void UnreportedStudies::loadStudyTable(const int userId){
 
+    std::string readIn;
+    SirenSQLQuery buildTable;
+    QFile file("://files/conf.cbir");
+
     this->userId = QString::number(userId);
     ui->lblServerSetup->setText("Fetching user pool, please wait...");
-
-    SirenSQLQuery buildPool;
-    buildPool.addProjectionAttribute("DISTINCT tableName");
-    buildPool.addTable("Pool");
-    buildPool.addWhereAttribute("userId = " + QString::number(userId));
 
     //Lock screen
     ui->centralwidget->setEnabled(false);
 
-    //Blocking call - State Machine
-    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state01);
-    webSocket->sendBinaryMessage(buildPool.generateQuery().toStdString().c_str());
+    //Read CBIR setup - Dataset oriented
+    file.open(QIODevice::ReadOnly);
+    if (!file.isOpen())
+        return;
+
+    QTextStream stream(&file);
+    for (QString parser = stream.readLine(); !parser.isNull(); parser = stream.readLine()) {
+
+        if ((parser.split("=").at(0).toUpper().simplified() == "TABLE") && (parser.split("=").size() > 1)){
+            tableName = parser.split("=").at(1).simplified();
+        }
+
+        if ((parser.split("=").at(0).toUpper().simplified() == "DEF_ATTIBUTE") && (parser.split("=").size() > 1)){
+            attName = parser.split("=").at(1).simplified();
+        }
+
+        if ((parser.split("=").at(0).toUpper().simplified() == "NUMBER_K") && (parser.split("=").size() > 1)){
+            numberK = parser.split("=").at(1).simplified();
+        }
+
+        if ((parser.split("=").at(0).toUpper().simplified() == "CLUSTER_MAX_SIZE") && (parser.split("=").size() > 1)){
+            clusterSize = parser.split("=").at(1).simplified();
+        }
+
+    };
+    file.close();
+
+
+    if ((!tableName.size()) && (!attName.size()) && (!numberK.size()) && (!clusterSize.size())){
+        ui->lblServerSetup->setText("Dataset setup is invalid. Please contact your DBA.");
+    } else {
+        buildTable.addProjectionList({"p.*", "Id", "Patient_Name", "Filename", "p.tableName TableName", "url URL"});
+        buildTable.addTable("U_" + tableName + " u ");
+        buildTable.addJoinList({"Pool p"}, {"p.imageId = u.Id"});
+        buildTable.addWhereListAnd({"p.userId = '" + this->userId + "'", "p.tableName = '" + tableName + "'"});
+
+        ui->lblServerSetup->setText("Loading pool, please wait...");
+        connect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state01);
+        webSocket->sendBinaryMessage(buildTable.generateQuery().toStdString().c_str());
+    }
 }
 
 
@@ -184,13 +226,16 @@ void UnreportedStudies::on_btnViewStudy_clicked(){
             QTableWidgetItem *item = ui->tblInfo->item(pos, 0);
             QStringList parameters = item->toolTip().split(",");
 
+            for (int k = 0; k < ui->tblInfo->columnCount(); k++){
+                ui->tblInfo->item(pos, k)->setBackground(QBrush(QColor(187,187,187)));
+            }
+
             ui->centralwidget->setEnabled(false);
             //Blocking call - State Machine
             if (QFileInfo::exists(WFS_NAME + parameters.at(2).simplified()) && QFileInfo(WFS_NAME + parameters.at(2).simplified()).isFile()){
-                state05();
+                state03();
             } else {
-                connect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state04);
-                webSocket->sendBinaryMessage(("REQUEST " + parameters.at(2).simplified()).toStdString().c_str());
+                state02();
             }
         } catch(...) {
             ui->lblServerSetup->setText("Error: Invalid patient selection.");
@@ -201,43 +246,9 @@ void UnreportedStudies::on_btnViewStudy_clicked(){
     ui->lblServerSetup->setText("Connected to the Server!");
 }
 
-
-
 void UnreportedStudies::state01(QByteArray message){
 
     disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state01);
-
-    if(message.isEmpty()){
-           ui->lblServerSetup->setText("Images' pool is empty!");
-       } else {
-           ui->lblServerSetup->setText("Loading pool, please wait...");
-
-           QString unionQuery;
-           ResultTable poolTables(Util::toStringList(message.split('\n')));
-           SirenSQLQuery buildTable;
-
-           for (int x = 0; x < poolTables.size(); x++){
-               if (x > 0){
-                    unionQuery += " UNION ";
-               }
-
-               buildTable.clear();
-               buildTable.addProjectionList({"p.*", "Id", "Patient_Name", "Filename", "p.tableName TableName", "url URL"});
-               buildTable.addTable("U_" + poolTables.fetchByColumnId(x, 0) + " u ");
-               buildTable.addJoinList({"Pool p"}, {"p.imageId = u.Id"});
-               buildTable.addWhereListAnd({"p.userId = '" + userId + "'", "p.tableName = '" + poolTables.fetchByColumnId(x, 0) + "'"});
-
-               unionQuery += buildTable.generateQuery();
-           }
-
-           connect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state02);
-           webSocket->sendBinaryMessage(unionQuery.toStdString().c_str());
-       }
-}
-
-void UnreportedStudies::state02(QByteArray message){
-
-    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state02);
 
     if(message.isEmpty()){
         ui->lblServerSetup->setText("An error loading the studies ocurred, please try again.");
@@ -250,9 +261,44 @@ void UnreportedStudies::state02(QByteArray message){
     }
 }
 
-void UnreportedStudies::state04(QByteArray message){
+void UnreportedStudies::state02(){
 
-    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state04);
+    SirenSQLQuery buildMaskStatement;
+    uint8_t pos = ui->tblInfo->currentRow();
+    QTableWidgetItem *item = ui->tblInfo->item(pos, 0);
+    QStringList parameters = item->toolTip().split(",");
+
+    buildMaskStatement.addProjectionAttribute("Id, Mask");
+    buildMaskStatement.addTable("U_" + parameters.at(1).simplified());
+    buildMaskStatement.addWhereAttribute("Id = " + parameters.at(0));
+
+    ui->lblServerSetup->setText("Loading masks, please wait ...");
+    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state09);
+    webSocket->sendBinaryMessage(buildMaskStatement.generateQuery().toStdString().c_str());
+}
+
+void UnreportedStudies::state09(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state09);
+
+    ResultTable masks(Util::toStringList(message.split('\n')));
+    uint8_t pos = ui->tblInfo->currentRow();
+    QTableWidgetItem *item = ui->tblInfo->item(pos, 0);
+    QStringList parameters = item->toolTip().split(",");
+
+
+
+    if (masks.size()){
+        mapNameToMask[parameters.at(1).simplified()] = masks.fetchByColumnId(0, masks.locateColumn("Mask"));
+    }
+
+    connect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state08);
+    webSocket->sendBinaryMessage(("REQUEST " + parameters.at(2).simplified()).toStdString().c_str());
+}
+
+void UnreportedStudies::state08(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state08);
     ui->lblServerSetup->setText("Loading query image, please wait ...");
 
     uint8_t pos = ui->tblInfo->currentRow();
@@ -261,18 +307,26 @@ void UnreportedStudies::state04(QByteArray message){
         QTableWidgetItem *item = ui->tblInfo->item(pos, 0);
         QStringList parameters = item->toolTip().split(",");
         if (!parameters.at(2).simplified().toStdString().empty()){
-            Util::saveImageAndThumbnailToFS(parameters.at(2).simplified(), message, QSize(300,300));
+            Util::saveImageAndThumbnailToFS(parameters.at(2).simplified(), message, QSize(300,300), mapNameToMask[parameters.at(1).simplified()]);
         } else {
             ui->lblServerSetup->setText("Local storage fatal error.");
         }
         ui->lblServerSetup->setText("Image sucessfully downloaded.");
-        state05();
+        state03();
     } catch(...) {
         ui->lblServerSetup->setText("Error: Invalid patient selection.");
     }
 }
 
-void UnreportedStudies::state05(){
+void UnreportedStudies::state10(){
+
+    #if M_PROV
+        disconnect(diagnosisForm, &FormDiagnosis::finished, this, &UnreportedStudies::state10);
+        if (diagnosisForm != nullptr){
+            delete(diagnosisForm);
+            diagnosisForm = nullptr;
+        }
+    #endif
 
     uint8_t pos = ui->tblInfo->currentRow();
 
@@ -284,22 +338,50 @@ void UnreportedStudies::state05(){
         QString tableName = "U_" + parameters.at(1).simplified();
 
         SirenSQLQuery buildFV;
-        buildFV.addProjectionAttribute("PPV$" + tableName + "_PcaF.PcaF");
+        buildFV.addProjectionAttribute("PPV$" + tableName + "_"+attName+"."+attName+"");
         buildFV.addTable(tableName);
-        buildFV.addJoinList( {"PPV$" + tableName + "_PcaF"},
-                             {tableName + ".PcaF = " + " PPV$" + tableName + "_PcaF.PcaF_id"});
+        buildFV.addJoinList( {"PPV$" + tableName + "_"+attName+""},
+                                 {tableName + "."+attName+" = " + " PPV$" + tableName + "_"+attName+"."+attName+"_id"});
         buildFV.addWhereAttribute("Id = " + parameters.at(0).simplified());
 
-        connect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state06);
+        connect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state04);
         webSocket->sendBinaryMessage(buildFV.generateQuery().toStdString().c_str());
     } catch(...) {
         ui->lblServerSetup->setText("Error: Invalid patient selection.");
     }
 }
 
-void UnreportedStudies::state06(QByteArray message){
+void UnreportedStudies::state03(){
 
-    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state06);
+    //Provenance-related stuff
+    #if M_PROV
+    {
+        if (diagnosisForm != nullptr){
+            delete(diagnosisForm);
+        }
+
+        uint8_t pos = ui->tblInfo->currentRow();
+        QTableWidgetItem *item = ui->tblInfo->item(pos, 0);
+        QStringList parameters = item->toolTip().split(",");
+
+        diagnosisForm = new FormDiagnosis(parameters.at(2).simplified(),
+                                          parameters.at(0).toInt(),
+                                          parameters.at(1).simplified(),
+                                          "origin: Initial Diagnosis",
+                                          webSocket,
+                                          userId.toInt(),
+                                          mapNameToMask[parameters.at(1).simplified()]);
+        connect(diagnosisForm, &FormDiagnosis::finished, this, &UnreportedStudies::state10);
+        diagnosisForm->showFullScreen();
+    }
+    #else
+        state10();
+    #endif
+}
+
+void UnreportedStudies::state04(QByteArray message){
+
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state04);
     ui->lblServerSetup->setText("Building query, please wait...");
 
     //Query object
@@ -310,10 +392,10 @@ void UnreportedStudies::state06(QByteArray message){
     }
     oq.unserializeFromString(FeatureVector::fromBase64(oqTable.fetchByColumnId(0, 0).toStdString()));
 
-    state07();
+    state05();
 }
 
-void UnreportedStudies::state07(){
+void UnreportedStudies::state05(){
 
     ui->lblServerSetup->setText("Fetching scope, please wait ...");
     uint8_t pos = ui->tblInfo->currentRow();
@@ -328,16 +410,16 @@ void UnreportedStudies::state07(){
         buildScope.addWhereAttribute("tableName = '" + parameters.at(1).simplified() + "'");
 
         //Blocking call - State Machine
-        connect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state08);
+        connect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state06);
         webSocket->sendBinaryMessage(buildScope.generateQuery().toStdString().c_str());
     } catch(...) {
         ui->lblServerSetup->setText("Error: Invalid patient selection.");
     }
 }
 
-void UnreportedStudies::state08(QByteArray message){
+void UnreportedStudies::state06(QByteArray message){
 
-    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state08);
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state06);
     uint8_t pos = ui->tblInfo->currentRow();
     ui->lblServerSetup->setText("Building query, please wait ...");
 
@@ -376,11 +458,11 @@ void UnreportedStudies::state08(QByteArray message){
         queryT.addTable(tblName);
 
         //Selection
-        condition = tblName +".PcaF";
+        condition = tblName +"."+attName+"";
         condition += " DIVERSIFIED NEAR ";
         condition += queryObjectValue;
-        condition += " STOP AFTER 35";
-        condition += " BRIDGE 10";
+        condition += " STOP AFTER " + numberK;
+        condition += " BRIDGE " + clusterSize;
 
         queryT.addWhereAttribute(condition);
 
@@ -388,17 +470,17 @@ void UnreportedStudies::state08(QByteArray message){
         queryT.addOrderByAttribute(tblName + ".Id");
 
         ui->lblServerSetup->setText("Searching, please wait ...");
-        connect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state09);
+        connect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state07);
         webSocket->sendBinaryMessage(queryT.generateQuery().toStdString().c_str());
     } catch(...) {
         ui->lblServerSetup->setText("Error: Invalid patient selection.");
     }
 }
 
-void UnreportedStudies::state09(QByteArray message){
+void UnreportedStudies::state07(QByteArray message){
 
     ui->lblServerSetup->setText("Connected to the Server!");
-    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state09);
+    disconnect(webSocket, &QWebSocket::binaryMessageReceived, this, &UnreportedStudies::state07);
     uint8_t pos = ui->tblInfo->currentRow();
 
     MedicalImageTable rSet(Util::toStringList(message.split('\n')));
@@ -411,7 +493,7 @@ void UnreportedStudies::state09(QByteArray message){
             Analytics *analyticsViewer = new Analytics(parameters.at(1).simplified(),
                                                        parameters.at(2).simplified(),
                                                        oq,
-                                                       "PcaF",
+                                                       ""+attName+"",
                                                        "L2",
                                                        rSet,
                                                        false,
@@ -439,7 +521,7 @@ void UnreportedStudies::on_btnPACS_clicked(){
         QTableWidgetItem *item = ui->tblInfo->item(pos, 0);
         QStringList parameters = item->toolTip().split(",");
         QString link = parameters.at(3).simplified();
-        QDesktopServices::openUrl(QUrl("https://www.dicomlibrary.com?study=" + link, QUrl::TolerantMode));
+        QDesktopServices::openUrl(QUrl(PACS_BASE_URL + link, QUrl::TolerantMode));
     } catch(...) {
         ui->lblServerSetup->setText("Error: Invalid patient selection.");
     }

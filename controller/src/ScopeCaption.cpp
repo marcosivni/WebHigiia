@@ -33,7 +33,7 @@ bool ScopeCaption::findCaption(const QString &attName, const QString &valueName,
     return found;
 }
 
-QString ScopeCaption::findCaption(const QString &attName, const QString &valueName){
+QString ScopeCaption::matchCaption(const QString &attName, const QString &valueName){
 
     std::string answer;
 
