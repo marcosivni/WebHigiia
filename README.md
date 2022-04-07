@@ -1,10 +1,10 @@
-# WebHigiia - Client Project Sandbox 
+# WebHigiia (Wia) - Client Project Sandbox 
 
-## _A domainless Content-Based Medical Image Retrieval tool for CT and RX_
+## _A domainless Content-Based Medical Image Retrieval tool for X-Ray, CT and MRI images_
 
 **WARNING: WebHigiia is NOT clinical software. It was designed for education and demonstration purposes ONLY!**
 
-WebHigiia is a Content-Based Medical Image Retrieval (CBMIR) tool designed for querying CT and RX images. This version is a full rebase of the Higiia system and was coded in C++ with Qt SDK (5.15.1 - LGPL-license), and it is compatible with Web Assembly (emscripten coupled to Qt 5.15.1 with em++ compiler v2.0.22).
+WebHigiia (Wia) is a Content-Based Medical Image Retrieval (CBMIR) tool designed for querying RX, CT and MRI images. WebHigiia is coded in C++ with Qt SDK (5.15.1 - LGPL-license), and it is compatible with Web Assembly (Emscripten coupled to Qt 5.15.1 with em++ compiler v2.0.22).
 
 It supports JPEG, PNG, BMP, KRL, and DICOM medical images through self-contained 3rd-party libraries. The search mechanism is provided by a server counterpart that supports extended SQL queries (see [The Siren Project][siren]). Additionally, an external file server application is used for managing medical image storage (see [Websocketfy Project for WebHigiia](https://github.com/marcosivni/websocketfy)).
 
@@ -22,13 +22,13 @@ The following steps are required to set your first WebHigiia CBMIR application u
 > You can use a simple telnet connection (*i.e.*, `telnet <siren-server-ip> <siren-server-port>`) to submit the DDL script that contains standard SQL commands for the creation of the WebHigiia model tables.
 
 3. Structure your medical image dataset as an *WebHigiia table*. Then, create it on the server-side.
-> Please, refer to the [WebHigiia Modelling Guide][model] to structure your medical dataset as an WebHigiia table. The modeling process will also generate a table in which queries shall be placed.
+> Please, refer to the [WebHigiia Modelling Guide][model] to structure your medical dataset as an WebHigiia table. The modeling process also generates a table where the query images will be inserted.
 
-4. Load your **data** in the new dataset table and the **queries** (potentially undiagnosed cases) in the query table.
+4. Load your **data** in the new dataset table and the **query images** (potentially undiagnosed cases) in the query table.
 > Data are inserted with simple extended INSERT INTO commands. See the [example for mammograms][model]. Notice, feature extraction can be carried out manually or with the support of your favorite programming language and framework, e.g., sklearn, pandas, etc.
 
 5. Run WebHigiia.
-> You can either straightforwardly run the higiia.html file alongside .wasm and .js loaders or compile the source code with Qt to generate a binary version of WebHigiia. 
+> You can either straightforwardly run the WebHigiia.html file alongside .wasm and .js loaders or compile the source code with Qt to generate a binary version of WebHigiia. 
 
 6. ✨Query (undiagnosed) images by content✨
 
@@ -49,7 +49,7 @@ The WebHigiia client tool relies on a series of background technologies and 3rd-
 
 1. Background technologies 
     - [Qt SDK][qt] - Qt Cross-Platform and SDK C++ development environment. In addition module CHARTS must be downloaded (sudo apt-get install libqt5charts5-dev on Debian-based distros).
-    - [Emscripten][ems] - The Open Source Emscripten compiler toolchain (from C++) to WebAssembly. Supported (in some way) by Qt for WebAssembly.
+    - [Emscripten][ems] - The Open Source Emscripten compiler toolchain (from C++) to WebAssembly. Supported (in certain way) by Qt for WebAssembly.
 
 2.  3rd-party libraries (self-contained)
     - [Hermes][hermes] - Our own C++ library of distance functions (and utils).
@@ -67,7 +67,7 @@ Known limitations include:
 ## Installation
 
 Install the background technologies and download the source code of 3rd-party libraries.
-Then, adjust the include paths of `higiia.pro.example` file to point to the installation folders of the 3rd-party libraries and rename it to `higiia.pro`.
+Then, adjust the include paths of `webhigiia.pro.example` file to point to the installation folders of the 3rd-party libraries and rename it to `webhigiia.pro`.
 After that, you can use `build.sh` to compile the client version.
 Notice, you can configure the building type of WebHigiia in the `build.sh` file itself by selecting the `qmake` binary of your QT setup (e.g., wasm\_32 (default) or gcc\_64).
 
