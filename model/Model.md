@@ -18,7 +18,7 @@ A simple telnet connection (`telnet <siren-ip> <siren-port>`) allows you to feed
 
 ## Setting up WebHigiia - The Mammogram example
 
-**WebHigiia is a domainless tool** for any medical image domain of CT, RX, or other study types. To illustrate the application capabilities, let's set up WebHigiia as a Content-Based Medical Image Retrieval tool for mammograms[^note]. 
+**WebHigiia is a domainless tool** for any medical image domain of CT, RX, or other study types. To illustrate the application capabilities, let's set up WebHigiia as a Content-Based Medical Image Retrieval tool for mammograms.
 
 ## Loading a dataset
 
@@ -143,7 +143,7 @@ Upon entering into the system, WebHigiia loads the pool of query images so that 
 - Search Type:
 - `Similarity Search`: Executes a [classical and indexed *k*-Nearest Neighbor search][hetland].
 - `Diversity Search`: Executes a fast [diversified][drosou] *k*-Nearest Neighbor search with [BRID][jasbick].
-- `Bridged Similarity Search`: Executes a diversified *k*-Nearest Neighbor search by [grouping non-diversified elements][kundaha] with [BridGE][santos].
+- `Bridged Similarity Search`: Executes a diversified *k*-Nearest Neighbor search by grouping non-diversified elements with [BridGE][santos].
 - Similarity Attribute: Indicates the `PARTICULATE` attribute employed for the building of the search space.
 - Distance function: Indicates the search metric.
 - Relevance Feedback: Indicates the name of the Relevance Feedback method employed for query refinements.
@@ -311,12 +311,11 @@ The **glossary** for WebHigiia Analytics are as follows:
 - If you want to modify the client, feel free to fork the project.
 - _(C) THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS OF THIS SOFTWARE OR ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE._
 
-[^note]: WebHigiia [earliest versions][kundaha] were designed specifically for mammograms.
 
 [//]: # (These are reference links used in the body of this note and get stripped out when the markdown processor does its job. There is no need to format nicely because it shouldn't be seen. Thanks SO - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-syntax)
 
    [siren]: <https://github.com/marcosivni/siren>
-   [higiiaddl]: <https://github.com/marcosivni/higiia/blob/main/model/WebHigiia_DDL.sql>
+   [higiiaddl]: <https://github.com/marcosivni/webhigiia/blob/main/model/WebHigiia_DDL.sql>
    [mammo]: <example/data/mammo>
    [oq]: <example/data/mammo/query_example_2.krl>
    [hetland]: <https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.216.5538&rep=rep1&type=pdf>
