@@ -7,9 +7,9 @@ WebHigiia relies on a set of reserved tables and attributes for mapping dataset 
 
 A simple telnet connection (`telnet <siren-ip> <siren-port>`) allows you to feed the script to the server-side. The default creation script is available [here][higiiaddl], and the relational representation of the tables are as follows:
 
-![WebHigiia base tables](example/imgs/WebHigiiaBaseTables.png)
+![WebHigiia base tables](example/imgs/HigiiaBaseTables.png)
 
-- Table Login: For users and passwords (will be deprecated as soon as QSsl gets supported by Emscripten).
+- Table Login: For users and passwords (will be deprecated when QSsl gets supported by Emscripten).
 - Table Pool: Associates query images with users.
 - Scope: Defines the attributes of interest targeted by the CBMIR application (including labeling and visual mining).
 - Caption: Provides a textual explanation for the Scope attributes.
@@ -26,7 +26,7 @@ In this example, we will configure WebHigiia to query an [excerpt (05 images)][m
 
 ![Mammogram table](example/imgs/MammogramTable.png)
 
-> Attributes {`Id`, `IdStudy`, `Filename`, `Patient_Name`, `Image_Type`, `Image_Class`} are **reserved** and **mandatory** for any dataset modeled after WebHigiia. Besides, at least one PARTICULATE attribute (e.g., `PcaF` standing for PCA features) is expected to be found in the dataset-based table. WebHigiia can't issue queries over datasets without those attributes.
+> Attributes {`Id`, `IdStudy`, `Filename`, `Patient_Name`, `Image_Type`, `Image_Class`, `Mask`} are **reserved** and **mandatory** for any dataset modeled after Wia-Spine. Besides, at least one PARTICULATE attribute is expected to be found in the dataset-based table. Wia-Spine can't issue queries over datasets without those attributes.
 
 This table representation can be created on the SIREN server by using extended SQL (through a simple telnet connection), as follows:
 
@@ -88,9 +88,11 @@ INSERT INTO Mammogram (Id,  IdStudy,  Filename, Patient_Name, PcaF, Image_Type, 
                       VALUES (7, 1, 'mammo/usf0007_RCC_L1_MS_M.jpg', 'Patient 5', {0.55, 0.49, 0.37}, 'right craniocauda', 'Mass', 6, 2, 5);
 ```
 
-> **NOTE:** Remember copying the image files to the `fs` directory of the [Websocketfy-Server](https://github.com/marcosivni/websocketfy#generating-the-binary). In this example, the resulting directory tree is (Websocketfy-Server entry)/fs/mammo, where the images must be pasted.
+> Mask attribures are optional. They are compacted as base64 strings and inserted as BLOBs into the relational DBMS. If you want to understand how they are generated, please check this [GitHub entry](https://github.com/marcosivni/SlugfyBinaryMask/).
 
-> After the insertion of dataset elements, WebHigiia can query images by content (following the multidimensional features and the user-defined metrics). Nevertheless, we must assign the query images (potentially undiagnosed entries) to the users that can access them.
+> **NOTE:** Remember copying the image files to the `fs` directory of the [Websocketfy-Server](https://github.com/marcosivni/websocketfy#generating-the-binary). 
+
+> After the insertion of dataset elements, Wia-Spine can query images by content (following the multidimensional features and the user-defined metrics). Nevertheless, we must assign the query images (potentially undiagnosed entries) to the users that can access them.
 
 ## Prepare for querying
 
@@ -314,7 +316,7 @@ The **glossary** for WebHigiia Analytics are as follows:
 [//]: # (These are reference links used in the body of this note and get stripped out when the markdown processor does its job. There is no need to format nicely because it shouldn't be seen. Thanks SO - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-syntax)
 
    [siren]: <https://github.com/marcosivni/siren>
-   [higiiaddl]: <WebHigiia_DDL.sql>
+   [higiiaddl]: <https://github.com/marcosivni/higiia/blob/main/model/WebHigiia_DDL.sql>
    [mammo]: <example/data/mammo>
    [oq]: <example/data/mammo/query_example_2.krl>
    [hetland]: <https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.216.5538&rep=rep1&type=pdf>
