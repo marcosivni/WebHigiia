@@ -1,10 +1,12 @@
 # WebHigiia (WIA) - Client Project Sandbox 
 
-## _A Content-Based Medical Image Retrieval tool for X-Ray, CT and MRI images_
 
 **This repository contains the source code to reproduce the CBIR implementation reported in the manuscript _Enhancing COVID-19 and ILD diagnoses with Content-based Image Retrieval: An experimental study_, submitted to the Journal of Digital Imaging. The [HC-CXRay-INT dataset](https://github.com/marcosivni/WiaChestExtractor) discussed in the manuscript is available [here](https://github.com/marcosivni/WiaChestExtractor).**
 
 **WARNING: WebHigiia is NOT clinical software. It was designed for education and demonstration purposes ONLY!**
+
+
+## _A CBMIR tool for X-Ray, CT and MRI images_
 
 WebHigiia (WIA) is a Content-Based Medical Image Retrieval (CBMIR) tool designed for querying RX, CT and MRI images. WebHigiia is coded in C++ with Qt SDK (5.15.1 - LGPL-license), and it is compatible with Web Assembly (Emscripten coupled to Qt 5.15.1 with em++ compiler v2.0.22).
 
