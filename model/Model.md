@@ -26,7 +26,7 @@ In this example, we will configure WebHigiia to query an [excerpt (05 images)][m
 
 ![Mammogram table](example/imgs/MammogramTable.png)
 
-> Attributes {`Id`, `IdStudy`, `Filename`, `Patient_Name`, `Image_Type`, `Image_Class`, `Mask`} are **reserved** and **mandatory** for any dataset modeled after Wia-Spine. Besides, at least one PARTICULATE attribute is expected to be found in the dataset-based table. Wia-Spine can't issue queries over datasets without those attributes.
+> Attributes {`Id`, `IdStudy`, `Filename`, `Patient_Name`, `Image_Type`, `Image_Class`, `Mask`} are **reserved** and **mandatory** for any dataset modeled after WIA. Besides, at least one PARTICULATE attribute is expected to be found in the dataset-based table. WIA can't issue queries over datasets without those attributes.
 
 This table representation can be created on the SIREN server by using extended SQL (through a simple telnet connection), as follows:
 
@@ -92,7 +92,7 @@ INSERT INTO Mammogram (Id,  IdStudy,  Filename, Patient_Name, PcaF, Image_Type, 
 
 > **NOTE:** Remember copying the image files to the `fs` directory of the [Websocketfy-Server](https://github.com/marcosivni/websocketfy#generating-the-binary). 
 
-> After the insertion of dataset elements, Wia-Spine can query images by content (following the multidimensional features and the user-defined metrics). Nevertheless, we must assign the query images (potentially undiagnosed entries) to the users that can access them.
+> After the insertion of dataset elements, WIA can query images by content (following the multidimensional features and the user-defined metrics). Nevertheless, we must assign the query images (potentially undiagnosed entries) to the users that can access them.
 
 ## Prepare for querying
 

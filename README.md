@@ -1,10 +1,10 @@
-# WebHigiia (Wia) - Client Project Sandbox 
+# WebHigiia (WIA) - Client Project Sandbox 
 
 ## _A domainless Content-Based Medical Image Retrieval tool for X-Ray, CT and MRI images_
 
 **WARNING: WebHigiia is NOT clinical software. It was designed for education and demonstration purposes ONLY!**
 
-WebHigiia (Wia) is a Content-Based Medical Image Retrieval (CBMIR) tool designed for querying RX, CT and MRI images. WebHigiia is coded in C++ with Qt SDK (5.15.1 - LGPL-license), and it is compatible with Web Assembly (Emscripten coupled to Qt 5.15.1 with em++ compiler v2.0.22).
+WebHigiia (WIA) is a Content-Based Medical Image Retrieval (CBMIR) tool designed for querying RX, CT and MRI images. WebHigiia is coded in C++ with Qt SDK (5.15.1 - LGPL-license), and it is compatible with Web Assembly (Emscripten coupled to Qt 5.15.1 with em++ compiler v2.0.22).
 
 It supports JPEG, PNG, BMP, KRL, and DICOM medical images through self-contained 3rd-party libraries. The search mechanism is provided by a server counterpart that supports extended SQL queries (see [The Siren Project][siren]). Additionally, an external file server application is used for managing medical image storage (see [Websocketfy Project for WebHigiia](https://github.com/marcosivni/websocketfy)).
 

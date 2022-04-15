@@ -1079,7 +1079,7 @@ void Analytics::on_btnUpdate_clicked(){
     //Instantiate the chart
     chart = new QChartView();
     chart->setRenderHint(QPainter::HighQualityAntialiasing);
-    chart->chart()->setTitle("Higiia - Diversity-based Medical Visual Mining");
+    chart->chart()->setTitle("WebHigiia - Diversity-based Medical Visual Mining");
     chart->chart()->setTheme(QChart::ChartThemeDark);
 
     //For each label...
