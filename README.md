@@ -1,6 +1,8 @@
 # WebHigiia (WIA) - Client Project Sandbox 
 
-## _A domainless Content-Based Medical Image Retrieval tool for X-Ray, CT and MRI images_
+## _A Content-Based Medical Image Retrieval tool for X-Ray, CT and MRI images_
+
+**This repository contains the source code to reproduce the CBIR implementation reported in the manuscript _Enhancing COVID-19 and ILD diagnoses with Content-based Image Retrieval: An experimental study_, submitted to the Journal of Digital Imaging. The [HC-CXRay-INT dataset](https://github.com/marcosivni/WiaChestExtractor) discussed in the manuscript is available [here](https://github.com/marcosivni/WiaChestExtractor).**
 
 **WARNING: WebHigiia is NOT clinical software. It was designed for education and demonstration purposes ONLY!**
 
