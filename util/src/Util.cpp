@@ -299,8 +299,6 @@ Image Util::unserialize(std::string dataIn){
             Pixel p;
             if (d[(x*bmp.getWidth()) + y]){
                 p.setGrayPixelValue(255);
-                //p.setRGBPixelValue(255, 19, 165);
-                //p.setRGBPixelValue(255, 255, 0);
             }
             bmp.setPixel(y, x, p);
         }

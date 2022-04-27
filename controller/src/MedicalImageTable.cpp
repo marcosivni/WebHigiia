@@ -93,6 +93,8 @@ QString MedicalImageTable::toString(){
     for (int x = 0; x < size(); x++){
         answer.append(fetchTupleByRowId(x) + "\n");
     }
+
+    return answer;
 }
 
 

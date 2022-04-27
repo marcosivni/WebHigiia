@@ -1,7 +1,7 @@
 #include "UnreportedStudies.h"
 #include "ui_UnreportedStudies.h"
 
-UnreportedStudies::UnreportedStudies(QWebSocket *webSocket, const int userId, QWidget *parent) :
+UnreportedStudies::UnreportedStudies(QWebSocket *webSocket, const int userId, QString tableName, QString attName, QString numberK, QString clusterSize, QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::UnreportedStudies){
 
@@ -32,6 +32,11 @@ UnreportedStudies::UnreportedStudies(QWebSocket *webSocket, const int userId, QW
     this->webSocket = webSocket;
     ui->txtSearchPatient->setFocus();
 
+    this->tableName = tableName;
+    this->attName = attName;
+    this->numberK = numberK;
+    this->clusterSize = clusterSize;
+
     //Provenance-related stuff
     #if M_PROV
         diagnosisForm = nullptr;
@@ -59,34 +64,6 @@ void UnreportedStudies::loadStudyTable(const int userId){
 
     //Lock screen
     ui->centralwidget->setEnabled(false);
-
-    //Read CBIR setup - Dataset oriented
-    file.open(QIODevice::ReadOnly);
-    if (!file.isOpen())
-        return;
-
-    QTextStream stream(&file);
-    for (QString parser = stream.readLine(); !parser.isNull(); parser = stream.readLine()) {
-
-        if ((parser.split("=").at(0).toUpper().simplified() == "TABLE") && (parser.split("=").size() > 1)){
-            tableName = parser.split("=").at(1).simplified();
-        }
-
-        if ((parser.split("=").at(0).toUpper().simplified() == "DEF_ATTIBUTE") && (parser.split("=").size() > 1)){
-            attName = parser.split("=").at(1).simplified();
-        }
-
-        if ((parser.split("=").at(0).toUpper().simplified() == "NUMBER_K") && (parser.split("=").size() > 1)){
-            numberK = parser.split("=").at(1).simplified();
-        }
-
-        if ((parser.split("=").at(0).toUpper().simplified() == "CLUSTER_MAX_SIZE") && (parser.split("=").size() > 1)){
-            clusterSize = parser.split("=").at(1).simplified();
-        }
-
-    };
-    file.close();
-
 
     if ((!tableName.size()) && (!attName.size()) && (!numberK.size()) && (!clusterSize.size())){
         ui->lblServerSetup->setText("Dataset setup is invalid. Please contact your DBA.");

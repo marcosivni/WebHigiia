@@ -17,6 +17,5 @@
         <file>icons/icoXRayLogo.png</file>
         <file>icons/icoZoomIn.png</file>
         <file>icons/icoZoomOut.png</file>
-        <file>files/conf.cbir</file>
     </qresource>
 </RCC>

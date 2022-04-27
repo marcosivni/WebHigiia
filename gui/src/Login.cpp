@@ -73,6 +73,10 @@ void Login::state01(){
         ui->lblServerSetup->setText("Server is unavailable!");
         ui->txtHostname->setEnabled(true);
         ui->txtPort->setEnabled(true);
+        ui->txtAttribute->setEnabled(true);
+        ui->txtTable->setEnabled(true);
+        ui->txtKNN->setEnabled(true);
+        ui->txtBridgeK->setEnabled(true);
         ui->txtUser->clear();
         ui->txtPass->clear();
         ui->txtUser->setFocus();
@@ -82,8 +86,12 @@ void Login::state01(){
             ui->lblServerSetup->setText("Logging in, please wait...");
 
             //Locking widgets
-            ui->btnLogin->setEnabled(false);
-            ui->btnExit->setEnabled(false);
+            ui->txtHostname->setEnabled(false);
+            ui->txtPort->setEnabled(false);
+            ui->txtAttribute->setEnabled(false);
+            ui->txtTable->setEnabled(false);
+            ui->txtKNN->setEnabled(false);
+            ui->txtBridgeK->setEnabled(false);
 
             //Create query -- Lazy auth until QSsl (client side) gets full support on Qt WASM
             SirenSQLQuery buildLogin;
@@ -108,6 +116,10 @@ void Login::on_btnSetup_clicked(){
 
     ui->txtHostname->setEnabled(true);
     ui->txtPort->setEnabled(true);
+    ui->txtAttribute->setEnabled(true);
+    ui->txtTable->setEnabled(true);
+    ui->txtKNN->setEnabled(true);
+    ui->txtBridgeK->setEnabled(true);
 }
 
 
@@ -134,7 +146,13 @@ void Login::state02(QByteArray message){
         ui->lblServerSetup->setText("Connected to the Server!");
 
         if (idTable.size()){
-            UnreportedStudies *unreportedStudies = new UnreportedStudies(webSocket, idTable.fetchByColumnId(0, 0).toInt(), nullptr);
+            UnreportedStudies *unreportedStudies = new UnreportedStudies(webSocket,
+                                                                         idTable.fetchByColumnId(0, 0).toInt(),
+                                                                         ui->txtTable->text(),
+                                                                         ui->txtAttribute->text(),
+                                                                         ui->txtKNN->text(),
+                                                                         ui->txtBridgeK->text(),
+                                                                         nullptr);
             unreportedStudies->show();
         } else {
             ui->lblServerSetup->setText("Invalid user or password!");

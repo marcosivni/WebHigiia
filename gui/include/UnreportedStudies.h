@@ -80,7 +80,12 @@ class UnreportedStudies : public QMainWindow{ Q_OBJECT
         void changeEvent(QEvent *e);
 
     public:
-        explicit UnreportedStudies(QWebSocket *webSocket, const int userId, QWidget *parent = 0);
+        explicit UnreportedStudies(QWebSocket *webSocket, const int userId,
+                                   QString tableName = "",
+                                   QString attName = "",
+                                   QString numberK = "",
+                                   QString clusterSize = "",
+                                   QWidget *parent = 0);
         ~UnreportedStudies();
 };
 
