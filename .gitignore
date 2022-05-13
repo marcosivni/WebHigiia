@@ -1,5 +1,6 @@
 # Regular files
 /3rd-party
+build.sh
 *~
 *.pro
 transfer.bat
