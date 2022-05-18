@@ -38,8 +38,8 @@ CREATE TABLE Scope(
 -- Provide a textual caption (short explanation) for the attributes included in the Scope
 CREATE TABLE Caption (
     tableN VARCHAR (45),
-    attribute VARCHAR (45),
+    attributeN VARCHAR (45),
     valueN VARCHAR (45),
     caption VARCHAR (256),
-    PRIMARY KEY (tableN, attribute, valueN)
+    PRIMARY KEY (tableN, attributeN, valueN)
 );
