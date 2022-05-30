@@ -44,18 +44,27 @@ QImage* Util::convertImageToQImage(Image *src){
     QImage *image = new QImage(src->getWidth(), src->getHeight(), QImage::Format_RGB32);
 
     uint8_t div;
-    if ((src->getBitsPerPixel() > 8) && (src->getBitsPerPixel() <= 16))
+    if ((src->getBitsPerPixel() > 8) && (src->getBitsPerPixel() <= 16)){
         div = 16;
-    else
+    } else {
         div = 1;
+    }
 
     for(size_t x = 0; x < src->getWidth(); x++){
         for (size_t y = 0; y < src->getHeight(); y++){
             uint16_t pp;
             if (src->isPhotometric()){
-                pp = (uint16_t) (65535 - src->getPixel(x, y).getGrayPixelValue())/div;
+                if (div == 1){
+                    pp = (uint8_t) (255 - src->getPixel(x, y).getGrayPixelValue());
+                } else {
+                    pp = (uint16_t) (65535 - src->getPixel(x, y).getGrayPixelValue())/div;
+                }
             } else {
-                pp = (uint16_t) src->getPixel(x, y).getGrayPixelValue()/div;
+                if (div == 1){
+                    pp = (uint8_t) src->getPixel(x, y).getGrayPixelValue();
+                } else {
+                    pp = (uint16_t) src->getPixel(x, y).getGrayPixelValue()/div;
+                }
             }
             if ((src->getPixel(x, y).getRedPixelValue() != src->getPixel(x, y).getBluePixelValue()) || (src->getPixel(x, y).getGreenPixelValue() != src->getPixel(x, y).getBluePixelValue())){
                 image->setPixel(x, y,
@@ -66,6 +75,7 @@ QImage* Util::convertImageToQImage(Image *src){
             } else {
                 image->setPixel(x, y, qRgb(pp, pp, pp));
             }
+
         }
     }
 

@@ -36,6 +36,11 @@ FormDiagnosis::FormDiagnosis(QString imageFilename,
 
     //load query image
     Image *currentImage = Util::openImage(imageFilename, mask);
+    if (((currentImage->type() == Image::KRL) || (currentImage->type() == Image::DICOM)) && !currentImage->windowedPixels()){
+        Image *bck = currentImage->windowing(currentImage->getWindowWidth(), currentImage->getWindowCenter());
+        delete (currentImage);
+        currentImage = bck;
+    }
     QImage *aux = Util::convertImageToQImage(currentImage);
     ui->lblImage->clear();
     ui->lblImage->setPixmap(QPixmap::fromImage(aux->scaled(800, 800)));

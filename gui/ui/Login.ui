@@ -193,7 +193,6 @@ QTabBar::tab:only-one {
             <property name="font">
              <font>
               <pointsize>9</pointsize>
-              <weight>75</weight>
               <bold>true</bold>
              </font>
             </property>
@@ -351,10 +350,17 @@ QTabBar::tab:only-one {
             </spacer>
            </item>
            <item row="0" column="1">
-            <widget class="QLineEdit" name="txtUser"/>
+            <widget class="QLineEdit" name="txtUser">
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
            </item>
            <item row="1" column="1">
             <widget class="QLineEdit" name="txtPass">
+             <property name="text">
+              <string/>
+             </property>
              <property name="echoMode">
               <enum>QLineEdit::Password</enum>
              </property>
@@ -461,7 +467,7 @@ QTabBar::tab:only-one {
               <bool>false</bool>
              </property>
              <property name="text">
-              <string>Lung2D</string>
+              <string>Mammo33D</string>
              </property>
             </widget>
            </item>
@@ -580,6 +586,10 @@ QTabBar::tab:only-one {
   <tabstop>btnExit</tabstop>
   <tabstop>txtHostname</tabstop>
   <tabstop>txtPort</tabstop>
+  <tabstop>txtTable</tabstop>
+  <tabstop>txtAttribute</tabstop>
+  <tabstop>txtKNN</tabstop>
+  <tabstop>txtBridgeK</tabstop>
   <tabstop>btnSetup</tabstop>
  </tabstops>
  <resources>
