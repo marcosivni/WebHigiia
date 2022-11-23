@@ -14,7 +14,7 @@ It supports JPEG, PNG, BMP, KRL, and DICOM medical images through self-contained
 
 The implementation of WebHigiia follows a simplified Model–View–Controller software pattern, where a set of pre-defined tables and classes are employed for accessing and querying medical image datasets stored in external servers. Figure 1 summarizes the relationships between the WebHigiia client and data servers.
 
-![WebHigiia relationships](https://github.com/marcosivni/higiia/blob/main/model/example/imgs/architecture.png)
+![WebHigiia relationships](https://github.com/marcosivni/WebHigiia/blob/main/model/example/imgs/architecture.png)
 Figure 1. Relationships between the WebHigiia client and data servers.
 
 The following steps are required to set your first WebHigiia CBMIR application up:
@@ -118,7 +118,7 @@ _(C) THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED WARRANTIES
 [//]: # (These are reference links used in the body of this note and get stripped out when the markdown processor does its job. There is no need to format it nicely because it shouldn't be seen. Thanks SO - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-syntax)
 
    [siren]: <https://github.com/marcosivni/siren>
-   [higiiaddl]: <https://github.com/marcosivni/higiia/blob/main/model/WebHigiia_DDL.sql>
+   [higiiaddl]: <https://github.com/marcosivni/WebHigiia/blob/main/model/WebHigiia_DDL.sql>
    [qt]: <https://www.qt.io/download>
    [ws]: <https://github.com/marcosivni/siren_web_socket>
    [ems]: <https://emscripten.org/docs/introducing_emscripten/index.html>
@@ -127,7 +127,7 @@ _(C) THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED WARRANTIES
    [dicomlib]: <https://github.com/marcosivni/dicomlib>
    [boost]: <https://www.boost.org/>
    [eigen]: <https://eigen.tuxfamily.org/>
-   [model]: <https://github.com/marcosivni/higiia/blob/main/model/Model.md>
+   [model]: <https://github.com/marcosivni/WebHigiia/blob/main/model/Model.md>
    
 
-![GitHub all releases](https://img.shields.io/github/downloads/marcosivni/higiia/total?style=flat-square)
+![GitHub all releases](https://img.shields.io/github/downloads/marcosivni/WebHigiia/total?style=flat-square)
