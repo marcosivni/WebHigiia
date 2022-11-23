@@ -1,0 +1,102 @@
+QT += websockets
+QT += core
+QT += network
+QT += widgets
+QT += printsupport
+QT += charts
+QT += gui
+QT += widgets
+
+#Remove # and rebuild to enable provenance data collection (human-in-the-loop testing)
+#DEFINES += "M_PROV=1"
+
+CONFIG += c++11
+CONFIG += -fpermissive
+LIBS += -lpthread
+
+#Boost includepath
+INCLUDEPATH += ../boost/libs
+
+#Dicomlib includepath
+INCLUDEPATH += ../dicomlib/include
+INCLUDEPATH += ../dicomlib
+
+#Eigen includepath
+INCLUDEPATH += ../eigen
+
+#Artemis includepath
+INCLUDEPATH += ../artemis/include \
+               ../artemis/include/dicom \
+               ../artemis/include/jpg \
+               ../artemis/include/bmp \
+               ../artemis/include/png \
+               ../artemis/include/krl
+
+#Hermes includepath
+INCLUDEPATH += ../hermes/include/
+INCLUDEPATH += ../hermes/util/include/
+
+
+#Higiia includepath
+INCLUDEPATH += controller/include/
+INCLUDEPATH += gui/include
+INCLUDEPATH += gui/ui
+INCLUDEPATH += util/include
+
+#Static LIBS
+LIBS += -L../dicomlib -ldicomlib
+LIBS += -L../artemis -lartemis
+LIBS += -L../hermes -lhermes
+
+# The following define makes your compiler emit warnings if you use
+# any Qt feature that has been marked deprecated (the exact warnings
+# depend on your compiler). Please consult the documentation of the
+# deprecated API in order to know how to port your code away from it.
+DEFINES += QT_DEPRECATED_WARNINGS
+
+# You can also make your code fail to compile if it uses deprecated APIs.
+# In order to do so, uncomment the following line.
+# You can also select to disable deprecated APIs only up to a certain version of Qt.
+#DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
+
+#Higiia sources
+SOURCES += \
+    util/src/Util.cpp \
+    util/src/WindowingInterval.cpp \
+    main.cpp \
+    gui/src/Login.cpp \
+    gui/src/UnreportedStudies.cpp \
+    gui/src/QueryParameters.cpp \
+    gui/src/OberonViewer.cpp \
+    gui/src/QPushButtonAlter.cpp \
+    gui/src/Analytics.cpp \
+    controller/src/ScopeCaption.cpp \
+    controller/src/ResultTable.cpp \
+    controller/src/MedicalImageTable.cpp \
+    controller/src/SirenSqlQuery.cpp
+
+#Higiia headers
+HEADERS += \    
+    util/include/Util.h \
+    util/include/WindowingInterval.h \
+    gui/include/Login.h \
+    gui/include/UnreportedStudies.h \
+    gui/include/QueryParameters.h \
+    gui/include/OberonViewer.h \
+    gui/include/QPushButtonAlter.h \
+    gui/include/Analytics.h \
+    controller/include/ScopeCaption.h \
+    controller/include/ResultTable.h \
+    controller/include/MedicalImageTable.h \
+    controller/include/SirenSqlQuery.h
+
+#Higiia forms
+FORMS += \
+    gui/ui/Login.ui \
+    gui/ui/UnreportedStudies.ui \
+    gui/ui/QueryParameters.ui \
+    gui/ui/OberonViewer.ui \
+    gui/ui/Analytics.ui
+
+#Higiia resources
+RESOURCES += icons.qrc

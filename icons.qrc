@@ -1,0 +1,21 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/favicon.ico</file>
+        <file>icons/icoAnalytics.png</file>
+        <file>icons/icoCbirSearch.png</file>
+        <file>icons/icoClose.png</file>
+        <file>icons/icoCloseReverseLine.png</file>
+        <file>icons/icoDetail.png</file>
+        <file>icons/icoDownArrow.png</file>
+        <file>icons/icoPdf.png</file>
+        <file>icons/icoScope.png</file>
+        <file>icons/icoScopeReverseLine.png</file>
+        <file>icons/icoSearch.png</file>
+        <file>icons/icoUpArrow.png</file>
+        <file>icons/icoViewStudy.png</file>
+        <file>icons/icoWriteNewDiagnosis.png</file>
+        <file>icons/icoXRayLogo.png</file>
+        <file>icons/icoZoomIn.png</file>
+        <file>icons/icoZoomOut.png</file>
+    </qresource>
+</RCC>
